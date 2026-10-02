@@ -1,0 +1,13 @@
+{
+  "name": "Prumo",
+  "short_name": "Prumo",
+  "description": "Suas tarefas e compromissos, organizados em poucos segundos.",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F6F7F6",
+  "theme_color": "#1E6B58",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
