@@ -80,7 +80,7 @@ export interface ProfileApi {
 
 export interface NotesApi {
   list(): Promise<Note[]>;
-  create(input: Pick<Note, 'x' | 'y' | 'z' | 'color'> & { content?: string }): Promise<Note>;
+  create(input: Pick<Note, 'x' | 'y' | 'z' | 'color'> & { content?: string; w?: number | null; h?: number | null }): Promise<Note>;
   update(id: string, patch: NotePatch): Promise<Note>;
   remove(id: string): Promise<void>;
 }

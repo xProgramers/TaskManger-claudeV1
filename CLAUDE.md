@@ -29,7 +29,7 @@ Gerenciador de tarefas pessoal em produção. Filosofia: poucas funcionalidades,
 3. Commit e push no `main`; acompanhar o deploy na Vercel.
 
 ## Quadro (notas adesivas)
-Tela `/quadro`: notas livres num quadro do tamanho da tela (sem zoom/infinito, de propósito). Posição salva como fração (0..1) do quadro em `notes.x/y`; `z` é a ordem de empilhamento. No celular vira grade. Sem setas, formas ou desenhos.
+Tela `/quadro`: notas livres num quadro do tamanho da tela (sem zoom/infinito, de propósito). Posição salva como fração (0..1) do quadro em `notes.x/y`; `z` é a ordem de empilhamento; `w`/`h` é o tamanho em pixels (null = padrão), ajustável pela alça no canto. No celular vira grade. Sem setas, formas ou desenhos.
 
 ## Fora do escopo (decisão de produto)
 Colaboração, equipes, comentários, subtarefas complexas, kanban, pomodoro, gamificação, hábitos, anexos, IA desnecessária, recursos de whiteboard além das notas (setas, formas, desenho, zoom).

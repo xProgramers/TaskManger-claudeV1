@@ -364,6 +364,8 @@ export const mockApi: Api = {
         x: Math.min(1, Math.max(0, input.x)),
         y: Math.min(1, Math.max(0, input.y)),
         z: input.z,
+        w: input.w ?? null,
+        h: input.h ?? null,
         created_at: now,
         updated_at: now,
       };

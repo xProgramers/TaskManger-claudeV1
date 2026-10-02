@@ -3,7 +3,7 @@ import type { NotesApi } from '@/services/api';
 import { toAppError } from '@/utils/errors';
 import { getSupabase } from './client';
 
-const COLUMNS = 'id,user_id,content,color,x,y,z,created_at,updated_at';
+const COLUMNS = 'id,user_id,content,color,x,y,z,w,h,created_at,updated_at';
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 export const supabaseNotes: NotesApi = {

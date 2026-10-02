@@ -27,6 +27,8 @@ export type Database = {
           x: number;
           y: number;
           z: number;
+          w: number | null;
+          h: number | null;
         };
         Insert: {
           color?: string;
@@ -38,6 +40,8 @@ export type Database = {
           x?: number;
           y?: number;
           z?: number;
+          w?: number | null;
+          h?: number | null;
         };
         Update: {
           color?: string;
@@ -49,6 +53,8 @@ export type Database = {
           x?: number;
           y?: number;
           z?: number;
+          w?: number | null;
+          h?: number | null;
         };
         Relationships: [];
       };

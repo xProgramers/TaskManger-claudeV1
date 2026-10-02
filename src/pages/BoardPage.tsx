@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useState, type MouseEvent } from 'react';
 import type { Note } from '@/types';
 import { useNoteActions, useNotes } from '@/hooks/useNotes';
 import { useMediaQuery } from '@/hooks/useUtils';
-import { NoteCard, NOTE_HEIGHT, NOTE_WIDTH } from '@/components/NoteCard';
+import { NoteCard, NOTE_HEIGHT, NOTE_MAX, NOTE_MIN_H, NOTE_MIN_W, NOTE_WIDTH } from '@/components/NoteCard';
 import { PageTitle } from '@/components/PageParts';
 import { ErrorState } from '@/components/EmptyState';
 import { Button } from '@/components/ui/Button';
@@ -34,14 +34,35 @@ export function BoardPage() {
   const [focusId, setFocusId] = useState<string | null>(null);
   const [boardRef, size] = useSize<HTMLDivElement>();
 
-  // Pixel <-> fraction, keeping the whole note inside the board.
-  const maxLeft = Math.max(0, size.width - NOTE_WIDTH);
-  const maxTop = Math.max(0, size.height - NOTE_HEIGHT);
-  const toPx = (n: Note) => ({ left: clamp(n.x * size.width, 0, maxLeft), top: clamp(n.y * size.height, 0, maxTop) });
-  const toFraction = (left: number, top: number) => ({
-    x: size.width ? clamp(left, 0, maxLeft) / size.width : 0,
-    y: size.height ? clamp(top, 0, maxTop) / size.height : 0,
+  /** Pixel size of a note, never larger than the board itself. */
+  const sizeOf = (n: Pick<Note, 'w' | 'h'>) => ({
+    width: Math.min(n.w ?? NOTE_WIDTH, Math.max(NOTE_MIN_W, size.width)),
+    height: Math.min(n.h ?? NOTE_HEIGHT, Math.max(NOTE_MIN_H, size.height)),
   });
+
+  // Pixel <-> fraction, keeping the whole note inside the board.
+  const toRect = (n: Note) => {
+    const s = sizeOf(n);
+    return {
+      ...s,
+      left: clamp(n.x * size.width, 0, Math.max(0, size.width - s.width)),
+      top: clamp(n.y * size.height, 0, Math.max(0, size.height - s.height)),
+    };
+  };
+  const toFraction = (left: number, top: number, n: Pick<Note, 'w' | 'h'> = { w: null, h: null }) => {
+    const s = sizeOf(n);
+    return {
+      x: size.width ? clamp(left, 0, Math.max(0, size.width - s.width)) / size.width : 0,
+      y: size.height ? clamp(top, 0, Math.max(0, size.height - s.height)) / size.height : 0,
+    };
+  };
+  /** New size, kept inside the board from the note's current corner. */
+  const resize = (n: Note, width: number, height: number) => {
+    const r = toRect(n);
+    const w = Math.round(clamp(width, NOTE_MIN_W, Math.min(NOTE_MAX, size.width - r.left)));
+    const h = Math.round(clamp(height, NOTE_MIN_H, Math.min(NOTE_MAX, size.height - r.top)));
+    if (w !== r.width || h !== r.height) actions.update(n.id, { w, h });
+  };
 
   const createAt = async (left: number, top: number) => {
     const { x, y } = toFraction(left, top);
@@ -137,13 +158,10 @@ export function BoardPage() {
                 <NoteCard
                   key={n.id}
                   mode="board"
-                  position={toPx(n)}
+                  rect={toRect(n)}
                   onFront={() => actions.bringToFront(n.id)}
-                  onDragEnd={(left, top) => actions.update(n.id, toFraction(left, top))}
-                  onNudge={(dx, dy) => {
-                    const p = toPx(n);
-                    actions.update(n.id, toFraction(p.left + dx * size.width, p.top + dy * size.height));
-                  }}
+                  onMoveEnd={(left, top) => actions.update(n.id, toFraction(left, top, n))}
+                  onResizeEnd={(width, height) => resize(n, width, height)}
                   {...cardProps(n)}
                 />
               ))

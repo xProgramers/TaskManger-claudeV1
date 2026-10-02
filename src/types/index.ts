@@ -158,8 +158,11 @@ export interface Note {
   y: number;
   /** Stacking order; higher is on top. */
   z: number;
+  /** Size in pixels; null = default size. */
+  w: number | null;
+  h: number | null;
   created_at: string;
   updated_at: string;
 }
 
-export type NotePatch = Partial<Pick<Note, 'content' | 'color' | 'x' | 'y' | 'z'>>;
+export type NotePatch = Partial<Pick<Note, 'content' | 'color' | 'x' | 'y' | 'z' | 'w' | 'h'>>;

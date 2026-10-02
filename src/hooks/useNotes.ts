@@ -31,9 +31,15 @@ export function useNoteActions() {
   const topZ = () => Math.max(0, ...(getQueryData<Note[]>(NOTES) ?? []).map((n) => n.z));
 
   const create = useCallback(
-    async (x: number, y: number, color: NoteColor = 'yellow', content = '') => {
+    async (
+      x: number,
+      y: number,
+      color: NoteColor = 'yellow',
+      content = '',
+      size: Pick<Note, 'w' | 'h'> = { w: null, h: null },
+    ) => {
       try {
-        const note = await api.notes.create({ x, y, z: topZ() + 1, color, content });
+        const note = await api.notes.create({ x, y, z: topZ() + 1, color, content, ...size });
         setQueryData<Note[]>(NOTES, (old) => [...(old ?? []), note].sort(byZ));
         return note;
       } catch (e) {
@@ -125,7 +131,7 @@ export function useNoteActions() {
         description: note.content.split('\n')[0]?.slice(0, 60) || undefined,
         action: {
           label: 'Desfazer',
-          onClick: () => void create(note.x, note.y, note.color, note.content),
+          onClick: () => void create(note.x, note.y, note.color, note.content, { w: note.w, h: note.h }),
         },
       });
     },

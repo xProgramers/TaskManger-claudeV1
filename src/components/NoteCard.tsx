@@ -5,8 +5,13 @@ import { cn } from '@/utils/cn';
 import { CheckIcon, GripIcon, TrashIcon } from './icons';
 import { Popover } from './ui/Layer';
 
+/** Default size; a note can be resized within the limits below (also enforced by the database). */
 export const NOTE_WIDTH = 224;
 export const NOTE_HEIGHT = 184;
+export const NOTE_MIN_W = 160;
+export const NOTE_MIN_H = 120;
+export const NOTE_MAX = 900;
+const HEADER_H = 32;
 
 const COLOR_LABEL: Record<NoteColor, string> = {
   yellow: 'Amarelo',
@@ -23,43 +28,50 @@ export const noteStyle = (color: NoteColor): CSSProperties => ({
   color: 'var(--note-ink)',
 });
 
+interface Rect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
 interface NoteCardProps {
   note: Note;
-  /** 'board': absolutely positioned and draggable. 'grid': flows in a list (phones). */
+  /** 'board': absolutely positioned, draggable and resizable. 'grid': flows in a list (phones). */
   mode: 'board' | 'grid';
   autoFocus?: boolean;
-  /** Board only: pixel position while rendering. */
-  position?: { left: number; top: number };
+  /** Board only: pixel rect while rendering. */
+  rect?: Rect;
   onContent: (value: string) => void;
   onBlur: () => void;
   onColor: (color: NoteColor) => void;
   onDelete: () => void;
   onFront?: () => void;
-  /** Board only: drag by the handle; returns the final pixel position. */
-  onDragEnd?: (left: number, top: number) => void;
-  /** Board only: keyboard nudge in fractions of the board. */
-  onNudge?: (dx: number, dy: number) => void;
+  /** Board only: final pixel position after a drag. */
+  onMoveEnd?: (left: number, top: number) => void;
+  /** Board only: final pixel size after a resize. */
+  onResizeEnd?: (width: number, height: number) => void;
 }
+
+type Gesture = { kind: 'move' | 'resize'; startX: number; startY: number; base: Rect; dx: number; dy: number };
 
 export function NoteCard({
   note,
   mode,
   autoFocus,
-  position,
+  rect,
   onContent,
   onBlur,
   onColor,
   onDelete,
   onFront,
-  onDragEnd,
-  onNudge,
+  onMoveEnd,
+  onResizeEnd,
 }: NoteCardProps) {
   const textRef = useRef<HTMLTextAreaElement>(null);
   const colorRef = useRef<HTMLButtonElement>(null);
   const [colorOpen, setColorOpen] = useState(false);
-  const [drag, setDrag] = useState<{ startX: number; startY: number; left: number; top: number; dx: number; dy: number } | null>(
-    null,
-  );
+  const [gesture, setGesture] = useState<Gesture | null>(null);
 
   useEffect(() => {
     if (autoFocus) textRef.current?.focus();
@@ -67,25 +79,43 @@ export function NoteCard({
 
   const firstLine = note.content.split('\n')[0]?.trim() || 'Nota vazia';
 
-  // --- drag by the handle (mouse, pen or touch) ---
-  const onPointerDown = (e: PointerEvent<HTMLButtonElement>) => {
-    if (mode !== 'board' || !position || e.button !== 0) return;
+  // --- pointer gestures (mouse, pen or touch) shared by move and resize ---
+  const start = (kind: Gesture['kind']) => (e: PointerEvent<HTMLElement>) => {
+    if (mode !== 'board' || !rect || e.button !== 0) return;
+    e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     onFront?.();
-    setDrag({ startX: e.clientX, startY: e.clientY, left: position.left, top: position.top, dx: 0, dy: 0 });
+    setGesture({ kind, startX: e.clientX, startY: e.clientY, base: rect, dx: 0, dy: 0 });
   };
-  const onPointerMove = (e: PointerEvent<HTMLButtonElement>) => {
-    if (!drag) return;
-    setDrag({ ...drag, dx: e.clientX - drag.startX, dy: e.clientY - drag.startY });
+  const move = (e: PointerEvent<HTMLElement>) => {
+    if (gesture) setGesture({ ...gesture, dx: e.clientX - gesture.startX, dy: e.clientY - gesture.startY });
   };
-  const onPointerUp = () => {
-    if (!drag) return;
-    const moved = Math.abs(drag.dx) + Math.abs(drag.dy) > 2;
-    if (moved) onDragEnd?.(drag.left + drag.dx, drag.top + drag.dy);
-    setDrag(null);
+  const end = () => {
+    if (!gesture) return;
+    const { kind, base, dx, dy } = gesture;
+    if (Math.abs(dx) + Math.abs(dy) > 2) {
+      if (kind === 'move') onMoveEnd?.(base.left + dx, base.top + dy);
+      else onResizeEnd?.(base.width + dx, base.height + dy);
+    }
+    setGesture(null);
   };
-  const onHandleKey = (e: KeyboardEvent<HTMLButtonElement>) => {
-    const step = e.shiftKey ? 0.1 : 0.02;
+
+  /** Grows or shrinks the height so the whole text fits (no inner scroll). */
+  const fitToContent = () => {
+    const ta = textRef.current;
+    if (!ta || !rect) return;
+    // Measure the text's natural height: take the textarea out of the flex
+    // sizing for a moment, otherwise it reports the note's current height.
+    const { flex, height } = ta.style;
+    ta.style.flex = 'none';
+    ta.style.height = '0px';
+    const needed = ta.scrollHeight + HEADER_H + 2;
+    ta.style.flex = flex;
+    ta.style.height = height;
+    onResizeEnd?.(rect.width, needed);
+  };
+
+  const keyStep = (e: KeyboardEvent<HTMLElement>, apply: (dx: number, dy: number) => void, step: number) => {
     const moves: Record<string, [number, number]> = {
       ArrowLeft: [-step, 0],
       ArrowRight: [step, 0],
@@ -95,11 +125,21 @@ export function NoteCard({
     const m = moves[e.key];
     if (!m) return;
     e.preventDefault();
-    onNudge?.(m[0], m[1]);
+    apply(m[0], m[1]);
   };
 
-  const left = drag ? drag.left + drag.dx : position?.left;
-  const top = drag ? drag.top + drag.dy : position?.top;
+  // Live geometry while dragging or resizing.
+  let live: Rect | undefined = rect;
+  if (rect && gesture) {
+    live =
+      gesture.kind === 'move'
+        ? { ...gesture.base, left: gesture.base.left + gesture.dx, top: gesture.base.top + gesture.dy }
+        : {
+            ...gesture.base,
+            width: Math.min(NOTE_MAX, Math.max(NOTE_MIN_W, gesture.base.width + gesture.dx)),
+            height: Math.min(NOTE_MAX, Math.max(NOTE_MIN_H, gesture.base.height + gesture.dy)),
+          };
+  }
 
   return (
     <article
@@ -108,11 +148,13 @@ export function NoteCard({
       className={cn(
         'group/note flex flex-col rounded-md border shadow-[0_1px_2px_rgb(0_0_0/0.06),0_6px_16px_-10px_rgb(0_0_0/0.25)]',
         mode === 'board' ? 'absolute' : 'relative min-h-[150px]',
-        drag ? 'z-[9999] rotate-[0.6deg] shadow-float transition-none' : 'transition-shadow duration-150',
+        gesture?.kind === 'move' ? 'rotate-[0.6deg] shadow-float transition-none' : 'transition-shadow duration-150',
       )}
       style={{
         ...noteStyle(note.color),
-        ...(mode === 'board' ? { left, top, width: NOTE_WIDTH, height: NOTE_HEIGHT, zIndex: drag ? 9999 : note.z } : {}),
+        ...(mode === 'board' && live
+          ? { left: live.left, top: live.top, width: live.width, height: live.height, zIndex: gesture ? 9999 : note.z }
+          : {}),
       }}
     >
       <div className="flex h-8 shrink-0 items-center gap-0.5 pr-1 pl-1">
@@ -121,11 +163,13 @@ export function NoteCard({
             type="button"
             aria-label={`Mover nota “${firstLine}”. Use as setas do teclado; Shift para mover mais.`}
             title="Arraste para mover"
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
-            onKeyDown={onHandleKey}
+            onPointerDown={start('move')}
+            onPointerMove={move}
+            onPointerUp={end}
+            onPointerCancel={end}
+            onKeyDown={(e) =>
+              rect && keyStep(e, (dx, dy) => onMoveEnd?.(rect.left + dx, rect.top + dy), e.shiftKey ? 80 : 16)
+            }
             className="flex h-7 flex-1 cursor-grab touch-none items-center rounded-xs pl-1 opacity-45 hover:opacity-80 focus-visible:opacity-100 active:cursor-grabbing"
           >
             <GripIcon size={14} />
@@ -144,7 +188,10 @@ export function NoteCard({
             title="Cor"
             className="flex size-7 items-center justify-center rounded-xs hover:bg-black/5 dark:hover:bg-white/10"
           >
-            <span className="size-3.5 rounded-full border border-black/15 dark:border-white/20" style={{ background: `var(--note-${note.color}-edge)` }} />
+            <span
+              className="size-3.5 rounded-full border border-black/15 dark:border-white/20"
+              style={{ background: `var(--note-${note.color}-edge)` }}
+            />
           </button>
           <button
             type="button"
@@ -176,10 +223,36 @@ export function NoteCard({
         }}
         placeholder="Escreva algo…"
         className={cn(
-          'w-full flex-1 resize-none bg-transparent px-3 pb-3 text-base leading-[22px] placeholder:text-current placeholder:opacity-40 focus:outline-none',
+          'min-h-0 w-full flex-1 resize-none bg-transparent px-3 pb-3 text-base leading-[22px] placeholder:text-current placeholder:opacity-40 focus:outline-none',
           mode === 'board' ? 'overflow-y-auto scrollbar-thin' : 'field-sizing-content min-h-[96px]',
         )}
       />
+
+      {mode === 'board' && (
+        <button
+          type="button"
+          aria-label="Redimensionar nota. Setas mudam o tamanho; clique duplo ajusta a altura ao texto."
+          title="Arraste para redimensionar; clique duplo ajusta ao texto"
+          onPointerDown={start('resize')}
+          onPointerMove={move}
+          onPointerUp={end}
+          onPointerCancel={end}
+          onDoubleClick={fitToContent}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              fitToContent();
+              return;
+            }
+            if (rect) keyStep(e, (dw, dh) => onResizeEnd?.(rect.width + dw, rect.height + dh), e.shiftKey ? 80 : 16);
+          }}
+          className="absolute right-0 bottom-0 flex size-5 cursor-nwse-resize touch-none items-end justify-end rounded-br-md p-[3px] opacity-40 hover:opacity-90 focus-visible:opacity-100"
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+            <path d="M9 1 1 9M9 5 5 9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+          </svg>
+        </button>
+      )}
 
       <Popover open={colorOpen} onClose={() => setColorOpen(false)} anchor={colorRef} label="Cor da nota" align="end">
         <div role="radiogroup" aria-label="Cor da nota" className="flex gap-1.5 p-1.5">

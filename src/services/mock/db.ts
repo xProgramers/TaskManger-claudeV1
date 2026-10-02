@@ -184,6 +184,8 @@ function seed(): DemoDb {
       x: x as number,
       y: y as number,
       z: i + 1,
+      w: null,
+      h: null,
       created_at: iso,
       updated_at: iso,
     })),
