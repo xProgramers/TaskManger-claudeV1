@@ -75,7 +75,7 @@ export function CalendarPage() {
         : capitalize(formatDayLong(cursor));
 
   return (
-    <div className="mx-auto max-w-[1180px]">
+    <div className="w-full">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="mr-auto text-2xl font-semibold tracking-[-0.02em] text-ink" aria-live="polite">
           {title}

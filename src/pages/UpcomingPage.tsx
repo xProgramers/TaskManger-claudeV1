@@ -33,7 +33,7 @@ export function UpcomingPage() {
   const total = data?.rows.filter((t) => t.status === 'pending').length ?? 0;
 
   return (
-    <div className="mx-auto max-w-[760px]">
+    <div className="max-w-[960px]">
       <PageTitle title="Próximas" subtitle="O que vem por aí, em ordem cronológica." />
 
       <div className="mt-6">

@@ -37,7 +37,7 @@ export function AllTasksPage({ categoryId }: { categoryId?: string }) {
   const rows = data?.rows ?? [];
 
   return (
-    <div className="mx-auto max-w-[860px]">
+    <div className="max-w-[1040px]">
       <PageTitle
         title={category ? category.name : categoryId ? 'Categoria' : 'Todas as tarefas'}
         subtitle={

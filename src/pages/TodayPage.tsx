@@ -51,7 +51,7 @@ export function TodayPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[760px]">
+    <div className="max-w-[960px]">
       <header>
         <p className="text-base text-ink-2">
           {greeting(hour)}
@@ -186,7 +186,7 @@ export function TodayPage() {
 
 function Onboarding({ onCreate, name }: { onCreate: () => void; name?: string }) {
   return (
-    <div className="mx-auto flex max-w-[520px] flex-col items-start pt-[8vh]">
+    <div className="flex max-w-[520px] flex-col items-start pt-[8vh]">
       <LogoMark size={40} />
       <h1 className="mt-6 text-[30px] leading-9 font-semibold tracking-[-0.025em] text-ink">
         Organize seu dia em poucos segundos{name ? `, ${name}` : ''}.

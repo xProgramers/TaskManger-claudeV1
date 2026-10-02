@@ -36,7 +36,7 @@ export function CompletedPage() {
   }, [data, timezone]);
 
   return (
-    <div className="mx-auto max-w-[760px]">
+    <div className="max-w-[960px]">
       <PageTitle title="Concluídas" subtitle="Seu histórico. Nada é apagado automaticamente." />
 
       <div className="mt-6">

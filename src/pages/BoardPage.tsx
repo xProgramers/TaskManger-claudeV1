@@ -88,7 +88,7 @@ export function BoardPage() {
   });
 
   return (
-    <div className="mx-auto flex max-w-[1180px] flex-col">
+    <div className="flex w-full flex-col">
       <PageTitle
         title="Quadro"
         subtitle={

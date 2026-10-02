@@ -71,7 +71,7 @@ export function SettingsPage() {
 
   if (!prefs) {
     return (
-      <div className="mx-auto flex max-w-[860px] flex-col gap-4">
+      <div className="flex max-w-[960px] flex-col gap-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-40 w-full" />
       </div>
@@ -79,7 +79,7 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[860px]">
+    <div className="max-w-[960px]">
       <PageTitle title="Configurações" />
       <div className="mt-6">
         <AccountSection name={prefs.full_name ?? ''} email={user?.email ?? ''} onSave={(full_name) => save({ full_name }, 'Nome atualizado')} />
