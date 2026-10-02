@@ -1,6 +1,7 @@
 import type { Api } from '@/services/api';
 import { supabaseAuth } from './auth';
 import { supabaseTasks } from './tasks';
+import { supabaseNotes } from './notes';
 import { supabaseCategories, supabaseNotifications, supabaseProfile, supabasePush } from './resources';
 
 export const supabaseApi: Api = {
@@ -11,4 +12,5 @@ export const supabaseApi: Api = {
   notifications: supabaseNotifications,
   profile: supabaseProfile,
   push: supabasePush,
+  notes: supabaseNotes,
 };

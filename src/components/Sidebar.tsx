@@ -16,6 +16,7 @@ import {
   LogoMark,
   PlusIcon,
   SettingsIcon,
+  StickyNoteIcon,
   SunIcon,
   UpcomingIcon,
 } from './icons';
@@ -25,6 +26,7 @@ export const NAV_ITEMS = [
   { to: '/proximas', label: 'Próximas', icon: UpcomingIcon },
   { to: '/todas', label: 'Todas', icon: ListIcon },
   { to: '/calendario', label: 'Calendário', icon: CalendarIcon },
+  { to: '/quadro', label: 'Quadro', icon: StickyNoteIcon },
   { to: '/concluidas', label: 'Concluídas', icon: CheckCircleIcon },
 ] as const;
 
@@ -177,7 +179,8 @@ export function MobileNav() {
       className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 backdrop-blur md:hidden"
     >
       <ul className="mx-auto flex h-14 max-w-md items-stretch justify-around">
-        {NAV_ITEMS.map(({ to, label, icon: Icon }) => {
+        {/* Five slots on phones: Concluídas moves to the account menu. */}
+        {NAV_ITEMS.filter((i) => i.to !== '/concluidas').map(({ to, label, icon: Icon }) => {
           const active = path === to;
           return (
             <li key={to} className="flex-1">

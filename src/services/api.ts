@@ -13,6 +13,8 @@ import type {
   CategoryInput,
   DateContext,
   ISODate,
+  Note,
+  NotePatch,
   Page,
   Task,
   TaskFilters,
@@ -76,6 +78,13 @@ export interface ProfileApi {
   update(patch: UserPreferencesPatch): Promise<UserPreferences>;
 }
 
+export interface NotesApi {
+  list(): Promise<Note[]>;
+  create(input: Pick<Note, 'x' | 'y' | 'z' | 'color'> & { content?: string }): Promise<Note>;
+  update(id: string, patch: NotePatch): Promise<Note>;
+  remove(id: string): Promise<void>;
+}
+
 export interface PushApi {
   register(subscription: PushSubscriptionJSON): Promise<void>;
   unregister(endpoint: string): Promise<void>;
@@ -89,4 +98,5 @@ export interface Api {
   notifications: NotificationsApi;
   profile: ProfileApi;
   push: PushApi;
+  notes: NotesApi;
 }

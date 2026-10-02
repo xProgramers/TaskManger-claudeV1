@@ -3,7 +3,7 @@
  * demo database (see ./db.ts). Not used when Supabase is configured.
  */
 import type { Api, AuthEvent } from '@/services/api';
-import type { AppNotification, AuthUser, Page, Task, TaskFilters } from '@/types';
+import type { AppNotification, AuthUser, Note, Page, Task, TaskFilters } from '@/types';
 import { computeDueAt } from '@/utils/dates';
 import { AppError } from '@/utils/errors';
 import { compareChronological, isOverdue, periodRange, PRIORITY_ORDER } from '@/utils/task';
@@ -346,5 +346,44 @@ export const mockApi: Api = {
     // Web Push needs a real backend; in the demo the open tab shows reminders.
     async register() {},
     async unregister() {},
+  },
+
+  notes: {
+    async list() {
+      await latency(100);
+      return clone([...demoDb().notes].sort((a, b) => a.z - b.z));
+    },
+    async create(input) {
+      await latency(80);
+      const now = new Date().toISOString();
+      const note: Note = {
+        id: newId(),
+        user_id: DEMO_USER.id,
+        content: (input.content ?? '').slice(0, 2000),
+        color: input.color,
+        x: Math.min(1, Math.max(0, input.x)),
+        y: Math.min(1, Math.max(0, input.y)),
+        z: input.z,
+        created_at: now,
+        updated_at: now,
+      };
+      demoDb().notes.push(note);
+      persist();
+      return clone(note);
+    },
+    async update(id, patch) {
+      await latency(60);
+      const note = demoDb().notes.find((n) => n.id === id);
+      if (!note) throw new AppError('Esta nota não existe mais.');
+      Object.assign(note, patch, { updated_at: new Date().toISOString() });
+      persist();
+      return clone(note);
+    },
+    async remove(id) {
+      await latency(60);
+      const db = demoDb();
+      db.notes = db.notes.filter((n) => n.id !== id);
+      persist();
+    },
   },
 };

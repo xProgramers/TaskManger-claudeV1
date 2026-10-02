@@ -10,6 +10,7 @@
 import type {
   AppNotification,
   Category,
+  Note,
   ISODate,
   ReminderOffset,
   Task,
@@ -28,6 +29,7 @@ export interface DemoDb {
   categories: Category[];
   tasks: Task[];
   notifications: AppNotification[];
+  notes: Note[];
 }
 
 const uid = () =>
@@ -169,6 +171,22 @@ function seed(): DemoDb {
     categories,
     tasks,
     notifications: [],
+    notes: [
+      ['Todo dia\n• Beber 2 L de água\n• Revisar a agenda de amanhã\n• 20 min de leitura', 'yellow', 0.04, 0.05],
+      ['Senha do Wi-Fi do escritório está no cofre', 'blue', 0.3, 0.08],
+      ['Ideia: pedir orçamento de 3 marceneiros antes de fechar a estante', 'green', 0.56, 0.06],
+      ['Ligar para a Ana sobre a festa de sábado', 'pink', 0.08, 0.5],
+    ].map(([content, color, x, y], i) => ({
+      id: uid(),
+      user_id: DEMO_USER.id,
+      content: content as string,
+      color: color as Note['color'],
+      x: x as number,
+      y: y as number,
+      z: i + 1,
+      created_at: iso,
+      updated_at: iso,
+    })),
   };
 
   for (const t of tasks) syncReminder(db, t, now);
@@ -209,7 +227,10 @@ export function demoDb(): DemoDb {
   if (db) return db;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) db = JSON.parse(raw) as DemoDb;
+    if (raw) {
+      db = JSON.parse(raw) as DemoDb;
+      db.notes ??= []; // demo data saved before the board existed
+    }
   } catch {
     db = null;
   }

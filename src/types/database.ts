@@ -16,6 +16,42 @@ export type Database = {
         Update: { color?: string; created_at?: string; id?: string; name?: string; user_id?: string };
         Relationships: [];
       };
+      notes: {
+        Row: {
+          color: string;
+          content: string;
+          created_at: string;
+          id: string;
+          updated_at: string;
+          user_id: string;
+          x: number;
+          y: number;
+          z: number;
+        };
+        Insert: {
+          color?: string;
+          content?: string;
+          created_at?: string;
+          id?: string;
+          updated_at?: string;
+          user_id?: string;
+          x?: number;
+          y?: number;
+          z?: number;
+        };
+        Update: {
+          color?: string;
+          content?: string;
+          created_at?: string;
+          id?: string;
+          updated_at?: string;
+          user_id?: string;
+          x?: number;
+          y?: number;
+          z?: number;
+        };
+        Relationships: [];
+      };
       notifications: {
         Row: {
           created_at: string;

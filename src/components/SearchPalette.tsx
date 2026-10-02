@@ -22,6 +22,7 @@ import {
   PlusIcon,
   SearchIcon,
   SettingsIcon,
+  StickyNoteIcon,
   SunIcon,
   UpcomingIcon,
 } from './icons';
@@ -85,6 +86,7 @@ export function SearchPalette() {
     { kind: 'action', id: 'upcoming', label: 'Ir para Próximas', icon: <UpcomingIcon />, run: go('/proximas') },
     { kind: 'action', id: 'all', label: 'Ir para Todas', icon: <ListIcon />, run: go('/todas') },
     { kind: 'action', id: 'calendar', label: 'Ir para Calendário', icon: <CalendarIcon />, run: go('/calendario') },
+    { kind: 'action', id: 'board', label: 'Ir para Quadro', icon: <StickyNoteIcon />, run: go('/quadro') },
     { kind: 'action', id: 'done', label: 'Ir para Concluídas', icon: <CheckCircleIcon />, run: go('/concluidas') },
     { kind: 'action', id: 'settings', label: 'Configurações', icon: <SettingsIcon />, run: go('/configuracoes') },
   ];

@@ -4,7 +4,7 @@ import { usePreferences } from '@/contexts/PreferencesContext';
 import { useTaskUI } from '@/contexts/TaskUIContext';
 import { Avatar } from './Avatar';
 import { NotificationBell } from './NotificationBell';
-import { LogOutIcon, LogoMark, PlusIcon, SearchIcon, SettingsIcon, TagIcon } from './icons';
+import { CheckCircleIcon, LogOutIcon, LogoMark, PlusIcon, SearchIcon, SettingsIcon, TagIcon } from './icons';
 import { Button, IconButton } from './ui/Button';
 import { Kbd } from './ui/Form';
 import { Menu, MenuItem, MenuSeparator } from './ui/Layer';
@@ -83,6 +83,11 @@ export function Header() {
           <MenuItem icon={<TagIcon />} onSelect={openCategories}>
             Categorias
           </MenuItem>
+          <div className="md:hidden">
+            <MenuItem icon={<CheckCircleIcon />} onSelect={() => navigate('/concluidas')}>
+              Concluídas
+            </MenuItem>
+          </div>
           <MenuSeparator />
           <MenuItem icon={<LogOutIcon />} onSelect={() => void signOut()}>
             Sair

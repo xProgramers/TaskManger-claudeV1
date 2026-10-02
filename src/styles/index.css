@@ -130,6 +130,14 @@
   --p-overlay: rgb(16 22 19 / 0.32);
   --p-shadow-float: 0 1px 2px rgb(16 24 20 / 0.06), 0 12px 32px -12px rgb(16 24 20 / 0.22);
   --p-shadow-sheet: -1px 0 0 rgb(16 24 20 / 0.04), -24px 0 48px -24px rgb(16 24 20 / 0.22);
+  /* Quadro: sticky-note paper tints (bg / edge) */
+  --note-yellow: #fbf1c7;  --note-yellow-edge: #ead98e;
+  --note-green: #dcefdf;   --note-green-edge: #b5d9bd;
+  --note-blue: #dce9f5;    --note-blue-edge: #b3cde6;
+  --note-pink: #f7e1e6;    --note-pink-edge: #e6b9c4;
+  --note-violet: #e9e2f4;  --note-violet-edge: #cbbde3;
+  --note-gray: #eceeec;    --note-gray-edge: #cfd5d1;
+  --note-ink: #2a2a22;
 }
 
 [data-theme='dark'] {
@@ -154,6 +162,13 @@
   --p-overlay: rgb(0 0 0 / 0.55);
   --p-shadow-float: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 16px 40px -12px rgb(0 0 0 / 0.65);
   --p-shadow-sheet: -1px 0 0 rgb(255 255 255 / 0.04), -24px 0 48px -16px rgb(0 0 0 / 0.6);
+  --note-yellow: #3a3420;  --note-yellow-edge: #57502e;
+  --note-green: #20332a;   --note-green-edge: #2f4d3e;
+  --note-blue: #1f2c3a;    --note-blue-edge: #2f4459;
+  --note-pink: #3a2329;    --note-pink-edge: #57343e;
+  --note-violet: #2c2539;  --note-violet-edge: #443957;
+  --note-gray: #262c29;    --note-gray-edge: #3a433e;
+  --note-ink: #ece8dc;
 }
 
 @layer base {

@@ -16,6 +16,7 @@ import { Spinner } from '@/components/ui/Spinner';
 
 // Heavier, less frequent screens are split into their own chunks.
 const CalendarPage = lazy(() => import('@/pages/CalendarPage').then((m) => ({ default: m.CalendarPage })));
+const BoardPage = lazy(() => import('@/pages/BoardPage').then((m) => ({ default: m.BoardPage })));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 
 const PUBLIC_ROUTES: Partial<Record<string, () => ReactNode>> = {
@@ -29,6 +30,7 @@ const TITLES: Record<string, string> = {
   '/proximas': 'Próximas',
   '/todas': 'Todas as tarefas',
   '/calendario': 'Calendário',
+  '/quadro': 'Quadro',
   '/concluidas': 'Concluídas',
   '/configuracoes': 'Configurações',
   '/entrar': 'Entrar',
@@ -73,6 +75,8 @@ function AppRoutes() {
       return <AllTasksPage />;
     case '/calendario':
       return <CalendarPage />;
+    case '/quadro':
+      return <BoardPage />;
     case '/concluidas':
       return <CompletedPage />;
     case '/configuracoes':

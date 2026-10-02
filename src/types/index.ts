@@ -139,3 +139,27 @@ export interface DateContext {
   today: ISODate;
   weekStartsOn: 0 | 1;
 }
+
+// ---------------------------------------------------------------------------
+// Quadro (sticky notes)
+// ---------------------------------------------------------------------------
+
+export const NOTE_COLORS = ['yellow', 'green', 'blue', 'pink', 'violet', 'gray'] as const;
+export type NoteColor = (typeof NOTE_COLORS)[number];
+
+export interface Note {
+  id: string;
+  user_id: string;
+  content: string;
+  color: NoteColor;
+  /** Left edge as a fraction (0..1) of the board width. */
+  x: number;
+  /** Top edge as a fraction (0..1) of the board height. */
+  y: number;
+  /** Stacking order; higher is on top. */
+  z: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type NotePatch = Partial<Pick<Note, 'content' | 'color' | 'x' | 'y' | 'z'>>;

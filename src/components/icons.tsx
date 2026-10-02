@@ -173,3 +173,19 @@ export function LogoMark({ size = 24 }: { size?: number }) {
     </svg>
   );
 }
+
+export const StickyNoteIcon = make(
+  'StickyNoteIcon',
+  <path d="M5 4h14a1 1 0 0 1 1 1v9l-6 6H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1ZM14 20v-5a1 1 0 0 1 1-1h5" />,
+);
+export const GripIcon = make(
+  'GripIcon',
+  <>
+    <circle cx="9" cy="7" r="1.1" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="7" r="1.1" fill="currentColor" stroke="none" />
+    <circle cx="9" cy="12" r="1.1" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="12" r="1.1" fill="currentColor" stroke="none" />
+    <circle cx="9" cy="17" r="1.1" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="17" r="1.1" fill="currentColor" stroke="none" />
+  </>,
+);
