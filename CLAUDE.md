@@ -29,7 +29,7 @@ Gerenciador de tarefas pessoal em produção. Filosofia: poucas funcionalidades,
 3. Commit e push no `main`; acompanhar o deploy na Vercel.
 
 ## Quadro (notas adesivas)
-Tela `/quadro`: notas livres num quadro do tamanho da tela (sem zoom/infinito, de propósito). Posição salva como fração (0..1) do quadro em `notes.x/y`; `z` é a ordem de empilhamento; `w`/`h` é o tamanho em pixels (null = padrão), ajustável pela alça no canto. No celular vira grade. Sem setas, formas ou desenhos.
+Tela `/quadro`: quadro infinito com pan (arrastar o fundo, roda do mouse) e zoom 25–200% (Ctrl+roda, pinça, botões, teclas + - 0 F). Posição das notas em pixels do "mundo" a 100% (`notes.pos_x/pos_y`, expostas no app como `x/y`; as colunas antigas `x/y` são legado). `z` é a ordem de empilhamento; `w`/`h` o tamanho em pixels (null = padrão). A visão (pan/zoom) fica no localStorage de cada aparelho. No celular vira grade. Sem setas, formas ou desenhos.
 
 ## Fora do escopo (decisão de produto)
-Colaboração, equipes, comentários, subtarefas complexas, kanban, pomodoro, gamificação, hábitos, anexos, IA desnecessária, recursos de whiteboard além das notas (setas, formas, desenho, zoom).
+Colaboração, equipes, comentários, subtarefas complexas, kanban, pomodoro, gamificação, hábitos, anexos, IA desnecessária, recursos de whiteboard além das notas (setas, formas, desenho).

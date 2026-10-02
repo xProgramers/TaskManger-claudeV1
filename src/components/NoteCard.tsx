@@ -40,8 +40,10 @@ interface NoteCardProps {
   /** 'board': absolutely positioned, draggable and resizable. 'grid': flows in a list (phones). */
   mode: 'board' | 'grid';
   autoFocus?: boolean;
-  /** Board only: pixel rect while rendering. */
+  /** Board only: rect in world pixels. */
   rect?: Rect;
+  /** Board only: current zoom, so pointer movement maps to world pixels. */
+  scale?: number;
   onContent: (value: string) => void;
   onBlur: () => void;
   onColor: (color: NoteColor) => void;
@@ -60,6 +62,7 @@ export function NoteCard({
   mode,
   autoFocus,
   rect,
+  scale = 1,
   onContent,
   onBlur,
   onColor,
@@ -83,12 +86,14 @@ export function NoteCard({
   const start = (kind: Gesture['kind']) => (e: PointerEvent<HTMLElement>) => {
     if (mode !== 'board' || !rect || e.button !== 0) return;
     e.preventDefault();
+    e.stopPropagation(); // don't start panning the board
     e.currentTarget.setPointerCapture(e.pointerId);
     onFront?.();
     setGesture({ kind, startX: e.clientX, startY: e.clientY, base: rect, dx: 0, dy: 0 });
   };
   const move = (e: PointerEvent<HTMLElement>) => {
-    if (gesture) setGesture({ ...gesture, dx: e.clientX - gesture.startX, dy: e.clientY - gesture.startY });
+    if (gesture)
+      setGesture({ ...gesture, dx: (e.clientX - gesture.startX) / scale, dy: (e.clientY - gesture.startY) / scale });
   };
   const end = () => {
     if (!gesture) return;
@@ -145,6 +150,9 @@ export function NoteCard({
     <article
       aria-label={`Nota: ${firstLine}`}
       onPointerDownCapture={() => onFront?.()}
+      onPointerDown={(e) => mode === 'board' && e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
+
       className={cn(
         'group/note flex flex-col rounded-md border shadow-[0_1px_2px_rgb(0_0_0/0.06),0_6px_16px_-10px_rgb(0_0_0/0.25)]',
         mode === 'board' ? 'absolute' : 'relative min-h-[150px]',

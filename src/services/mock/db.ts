@@ -30,6 +30,8 @@ export interface DemoDb {
   tasks: Task[];
   notifications: AppNotification[];
   notes: Note[];
+  /** 2 = infinite board (world pixel coordinates). */
+  boardVersion?: 2;
 }
 
 const uid = () =>
@@ -171,11 +173,12 @@ function seed(): DemoDb {
     categories,
     tasks,
     notifications: [],
+    boardVersion: 2,
     notes: [
-      ['Todo dia\n• Beber 2 L de água\n• Revisar a agenda de amanhã\n• 20 min de leitura', 'yellow', 0.04, 0.05],
-      ['Senha do Wi-Fi do escritório está no cofre', 'blue', 0.3, 0.08],
-      ['Ideia: pedir orçamento de 3 marceneiros antes de fechar a estante', 'green', 0.56, 0.06],
-      ['Ligar para a Ana sobre a festa de sábado', 'pink', 0.08, 0.5],
+      ['Todo dia\n• Beber 2 L de água\n• Revisar a agenda de amanhã\n• 20 min de leitura', 'yellow', 40, 40],
+      ['Senha do Wi-Fi do escritório está no cofre', 'blue', 340, 60],
+      ['Ideia: pedir orçamento de 3 marceneiros antes de fechar a estante', 'green', 640, 50],
+      ['Ligar para a Ana sobre a festa de sábado', 'pink', 90, 330],
     ].map(([content, color, x, y], i) => ({
       id: uid(),
       user_id: DEMO_USER.id,
@@ -232,6 +235,14 @@ export function demoDb(): DemoDb {
     if (raw) {
       db = JSON.parse(raw) as DemoDb;
       db.notes ??= []; // demo data saved before the board existed
+      // Demo notes saved with fractional positions (fixed board) -> world pixels, once.
+      if (db.boardVersion !== 2) {
+        db.notes.forEach((n) => {
+          n.x = Math.round(n.x * 1200);
+          n.y = Math.round(n.y * 700);
+        });
+        db.boardVersion = 2;
+      }
     }
   } catch {
     db = null;

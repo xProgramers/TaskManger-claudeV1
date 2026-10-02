@@ -152,9 +152,9 @@ export interface Note {
   user_id: string;
   content: string;
   color: NoteColor;
-  /** Left edge as a fraction (0..1) of the board width. */
+  /** Left edge in world pixels (infinite board, 100% zoom). */
   x: number;
-  /** Top edge as a fraction (0..1) of the board height. */
+  /** Top edge in world pixels (infinite board, 100% zoom). */
   y: number;
   /** Stacking order; higher is on top. */
   z: number;

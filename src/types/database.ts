@@ -27,6 +27,8 @@ export type Database = {
           x: number;
           y: number;
           z: number;
+          pos_x: number;
+          pos_y: number;
           w: number | null;
           h: number | null;
         };
@@ -40,6 +42,8 @@ export type Database = {
           x?: number;
           y?: number;
           z?: number;
+          pos_x?: number;
+          pos_y?: number;
           w?: number | null;
           h?: number | null;
         };
@@ -53,6 +57,8 @@ export type Database = {
           x?: number;
           y?: number;
           z?: number;
+          pos_x?: number;
+          pos_y?: number;
           w?: number | null;
           h?: number | null;
         };
