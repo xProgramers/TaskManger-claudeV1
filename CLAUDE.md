@@ -31,5 +31,7 @@ Gerenciador de tarefas pessoal em produção. Filosofia: poucas funcionalidades,
 ## Quadro (notas adesivas)
 Tela `/quadro`: quadro infinito com pan (arrastar o fundo, roda do mouse) e zoom 25–200% (Ctrl+roda, pinça, botões, teclas + - 0 F). Posição das notas em pixels do "mundo" a 100% (`notes.pos_x/pos_y`, expostas no app como `x/y`; as colunas antigas `x/y` são legado). `z` é a ordem de empilhamento; `w`/`h` o tamanho em pixels (null = padrão). A visão (pan/zoom) fica no localStorage de cada aparelho. No celular vira grade. Sem setas, formas ou desenhos.
 
+Ambientes (`boards`): cada nota pertence a um ambiente (`notes.board_id`, FK composta com `user_id`, `on delete cascade`). Nome livre (único por usuário) e cor do ícone. Nota inserida sem `board_id` vai para o primeiro ambiente do usuário (trigger `notes_assign_board`, cria "Geral" se preciso). O ambiente atual e a visão de cada ambiente ficam no localStorage do aparelho.
+
 ## Fora do escopo (decisão de produto)
 Colaboração, equipes, comentários, subtarefas complexas, kanban, pomodoro, gamificação, hábitos, anexos, IA desnecessária, recursos de whiteboard além das notas (setas, formas, desenho).

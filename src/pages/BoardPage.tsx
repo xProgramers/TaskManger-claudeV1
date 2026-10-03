@@ -1,6 +1,17 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
-import type { Note } from '@/types';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type PointerEvent,
+  type ReactNode,
+} from 'react';
+import type { Board, Note } from '@/types';
 import { useNoteActions, useNotes } from '@/hooks/useNotes';
+import { useCurrentBoard } from '@/hooks/useBoards';
+import { BoardSwitcher } from '@/components/BoardSwitcher';
 import { isTypingTarget, useMediaQuery } from '@/hooks/useUtils';
 import { NoteCard, NOTE_HEIGHT, NOTE_MAX, NOTE_MIN_H, NOTE_MIN_W, NOTE_WIDTH } from '@/components/NoteCard';
 import { PageTitle } from '@/components/PageParts';
@@ -22,13 +33,16 @@ interface View {
 
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 2;
-const VIEW_KEY = 'prumo:board-view';
+/** Before environments there was one view per device; it now belongs to the first environment. */
+const LEGACY_VIEW_KEY = 'prumo:board-view';
+const viewKey = (boardId: string) => `prumo:board-view:${boardId}`;
 const ORIGIN: View = { x: 40, y: 40, zoom: 1 };
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
-function loadView(): View | null {
+function loadView(boardId: string, isFirst: boolean): View | null {
   try {
-    const v = JSON.parse(localStorage.getItem(VIEW_KEY) ?? 'null') as View | null;
+    const raw = localStorage.getItem(viewKey(boardId)) ?? (isFirst ? localStorage.getItem(LEGACY_VIEW_KEY) : null);
+    const v = JSON.parse(raw ?? 'null') as View | null;
     return v && Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.zoom) ? v : null;
   } catch {
     return null;
@@ -85,8 +99,35 @@ function useElementSize() {
 // ---------------------------------------------------------------------------
 
 export function BoardPage() {
-  const { data: notes, isLoading, isError, refetch } = useNotes();
-  const actions = useNoteActions();
+  const { boards, current, select, isLoading, isError, refetch } = useCurrentBoard();
+  const isWide = useMediaQuery('(min-width: 768px)');
+
+  if (isError) {
+    return (
+      <div className="p-8">
+        <ErrorState message="Não foi possível carregar o quadro." onRetry={() => void refetch()} />
+      </div>
+    );
+  }
+  if (isLoading || !current) {
+    return (
+      <div className={isWide ? 'flex gap-6 p-6' : 'grid w-full gap-3 pt-16'}>
+        <Skeleton className="h-[184px] w-[224px] max-w-full rounded-md" />
+        <Skeleton className="h-[184px] w-[224px] max-w-full rounded-md" />
+      </div>
+    );
+  }
+
+  const switcher = <BoardSwitcher boards={boards} current={current} onSelect={select} />;
+  // Keyed by environment: switching starts from a clean slate (focus, gestures, view).
+  return (
+    <BoardScreen key={current.id} board={current} isFirst={boards[0]?.id === current.id} switcher={switcher} />
+  );
+}
+
+function BoardScreen({ board, isFirst, switcher }: { board: Board; isFirst: boolean; switcher: ReactNode }) {
+  const { data: notes, isLoading, isError, refetch } = useNotes(board.id);
+  const actions = useNoteActions(board.id);
   const isWide = useMediaQuery('(min-width: 768px)');
   const [focusId, setFocusId] = useState<string | null>(null);
   const list = notes ?? [];
@@ -122,7 +163,15 @@ export function BoardPage() {
         <ErrorState message="Não foi possível carregar o quadro." onRetry={() => void refetch()} />
       </div>
     ) : (
-      <InfiniteBoard notes={list} loading={isLoading} setFocusId={setFocusId} cardProps={cardProps} />
+      <InfiniteBoard
+        board={board}
+        isFirst={isFirst}
+        switcher={switcher}
+        notes={list}
+        loading={isLoading}
+        setFocusId={setFocusId}
+        cardProps={cardProps}
+      />
     );
   }
 
@@ -134,6 +183,7 @@ export function BoardPage() {
           Nota
         </Button>
       </PageTitle>
+      <div className="mt-4 -ml-1.5">{switcher}</div>
       <div className="mt-6">
         {isError ? (
           <ErrorState message="Não foi possível carregar o quadro." onRetry={() => void refetch()} />
@@ -144,7 +194,7 @@ export function BoardPage() {
           </div>
         ) : list.length === 0 ? (
           <div className="flex flex-col items-start gap-2 rounded-md border border-dashed border-line-strong px-5 py-7">
-            <p className="text-md font-semibold text-ink">Nenhuma nota ainda.</p>
+            <p className="text-md font-semibold text-ink">Nenhuma nota em “{board.name}” ainda.</p>
             <p className="text-base text-ink-2">Use o botão “Nota” para anotar algo rápido.</p>
           </div>
         ) : (
@@ -166,16 +216,19 @@ export function BoardPage() {
 type CardProps = Omit<Parameters<typeof NoteCard>[0], 'mode'>;
 
 interface InfiniteBoardProps {
+  board: Board;
+  isFirst: boolean;
+  switcher: ReactNode;
   notes: Note[];
   loading: boolean;
   setFocusId: (id: string | null) => void;
   cardProps: (n: Note) => CardProps;
 }
 
-function InfiniteBoard({ notes, loading, setFocusId, cardProps }: InfiniteBoardProps) {
-  const actions = useNoteActions();
+function InfiniteBoard({ board, isFirst, switcher, notes, loading, setFocusId, cardProps }: InfiniteBoardProps) {
+  const actions = useNoteActions(board.id);
   const { el, ref, size } = useElementSize();
-  const [view, setView] = useState<View | null>(loadView);
+  const [view, setView] = useState<View | null>(() => loadView(board.id, isFirst));
   const viewRef = useRef(view);
   viewRef.current = view;
 
@@ -190,13 +243,13 @@ function InfiniteBoard({ notes, loading, setFocusId, cardProps }: InfiniteBoardP
     if (!view) return;
     const id = setTimeout(() => {
       try {
-        localStorage.setItem(VIEW_KEY, JSON.stringify(view));
+        localStorage.setItem(viewKey(board.id), JSON.stringify(view));
       } catch {
         // ignore (private mode)
       }
     }, 300);
     return () => clearTimeout(id);
-  }, [view]);
+  }, [view, board.id]);
 
   const v = view ?? ORIGIN;
 
@@ -332,14 +385,15 @@ function InfiniteBoard({ notes, loading, setFocusId, cardProps }: InfiniteBoardP
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Toolbar: always visible, replaces the page title on this screen. */}
       <div className="flex h-12 shrink-0 items-center gap-3 border-b border-line bg-bg px-4">
-        <h1 className="text-base font-semibold text-ink">
-          Quadro
+        <h1 className="sr-only">Quadro: {board.name}</h1>
+        <div className="-ml-1.5 flex max-w-[45%] shrink-0 items-center">
+          {switcher}
           {notes.length > 0 && (
-            <span className="tnum ml-2 font-normal text-ink-3">
+            <span className="tnum ml-1 shrink-0 text-base text-ink-3">
               {notes.length} {notes.length === 1 ? 'nota' : 'notas'}
             </span>
           )}
-        </h1>
+        </div>
         <Button variant="primary" size="sm" leading={<PlusIcon size={14} />} onClick={createInView} className="ml-2">
           Nova nota
         </Button>
@@ -377,7 +431,7 @@ function InfiniteBoard({ notes, loading, setFocusId, cardProps }: InfiniteBoardP
       <div
         ref={ref}
         role="region"
-        aria-label="Quadro de notas. Arraste o fundo para mover; Ctrl e a roda do mouse para zoom."
+        aria-label={`Quadro de notas de ${board.name}. Arraste o fundo para mover; Ctrl e a roda do mouse para zoom.`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -423,7 +477,7 @@ function InfiniteBoard({ notes, loading, setFocusId, cardProps }: InfiniteBoardP
           notes.length === 0 && (
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
               <StickyNoteIcon size={28} className="text-ink-3" />
-              <p className="text-md font-semibold text-ink">Seu quadro está vazio.</p>
+              <p className="text-md font-semibold text-ink">“{board.name}” está vazio.</p>
               <p className="max-w-[36ch] text-base text-ink-2">
                 Clique duas vezes em qualquer lugar para criar uma nota, ou use “Nova nota” acima.
               </p>

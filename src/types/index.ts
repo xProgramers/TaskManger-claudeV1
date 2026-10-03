@@ -144,12 +144,30 @@ export interface DateContext {
 // Quadro (sticky notes)
 // ---------------------------------------------------------------------------
 
+/** An environment ("ambiente") of the board: a named, colored group of notes. */
+export interface Board {
+  id: string;
+  user_id: string;
+  name: string;
+  /** Hex color of the environment's icon. */
+  color: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BoardInput {
+  name: string;
+  color: string;
+}
+
 export const NOTE_COLORS = ['yellow', 'green', 'blue', 'pink', 'violet', 'gray'] as const;
 export type NoteColor = (typeof NOTE_COLORS)[number];
 
 export interface Note {
   id: string;
   user_id: string;
+  /** Environment the note belongs to. */
+  board_id: string;
   content: string;
   color: NoteColor;
   /** Left edge in world pixels (infinite board, 100% zoom). */

@@ -6,19 +6,25 @@ import { useToast } from '@/contexts/ToastContext';
 import { errorMessage } from '@/utils/errors';
 
 export const NOTES = ['notes'] as const;
+/** Cache key of one environment's notes. */
+export const notesKey = (boardId: string) => [...NOTES, boardId] as const;
 const CONTENT_SAVE_DELAY = 500;
 
 const byZ = (a: Note, b: Note) => a.z - b.z;
 
-export function useNotes() {
-  return useQuery(NOTES, () => api.notes.list(), { staleTime: 60_000 });
+export function useNotes(boardId: string | null) {
+  return useQuery(notesKey(boardId ?? ''), () => api.notes.list(boardId!), {
+    staleTime: 60_000,
+    enabled: Boolean(boardId),
+  });
 }
 
-function patchCache(id: string, patch: Partial<Note>) {
-  setQueryData<Note[]>(NOTES, (old) => (old ?? []).map((n) => (n.id === id ? { ...n, ...patch } : n)));
-}
+/** Notes actions for the environment `boardId` (the one on screen). */
+export function useNoteActions(boardId: string) {
+  const NOTES = notesKey(boardId);
+  const patchCache = (id: string, patch: Partial<Note>) =>
+    setQueryData<Note[]>(NOTES, (old) => (old ?? []).map((n) => (n.id === id ? { ...n, ...patch } : n)));
 
-export function useNoteActions() {
   const { toast } = useToast();
   // Pending content saves, debounced per note while the user types.
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -37,17 +43,20 @@ export function useNoteActions() {
       color: NoteColor = 'yellow',
       content = '',
       size: Pick<Note, 'w' | 'h'> = { w: null, h: null },
+      board = boardId,
     ) => {
       try {
-        const note = await api.notes.create({ x, y, z: topZ() + 1, color, content, ...size });
-        setQueryData<Note[]>(NOTES, (old) => [...(old ?? []), note].sort(byZ));
+        const key = notesKey(board);
+        const z = Math.max(0, ...(getQueryData<Note[]>(key) ?? []).map((n) => n.z)) + 1;
+        const note = await api.notes.create({ board_id: board, x, y, z, color, content, ...size });
+        setQueryData<Note[]>(key, (old) => [...(old ?? []), note].sort(byZ));
         return note;
       } catch (e) {
         toast({ tone: 'error', message: errorMessage(e, 'Não foi possível criar a nota.') });
         return null;
       }
     },
-    [toast],
+    [toast, boardId],
   );
 
   const persist = useCallback(
@@ -56,10 +65,10 @@ export function useNoteActions() {
         await api.notes.update(id, patch);
       } catch (e) {
         toast({ tone: 'error', message: errorMessage(e, 'Não foi possível salvar a nota.') });
-        invalidateQueries(NOTES); // restore the server's version
+        invalidateQueries(notesKey(boardId)); // restore the server's version
       }
     },
-    [toast],
+    [toast, boardId],
   );
 
   /** Immediate change (position, color, order). */
@@ -68,7 +77,7 @@ export function useNoteActions() {
       patchCache(id, patch);
       void persist(id, patch);
     },
-    [persist],
+    [persist, boardId],
   );
 
   /** Typing: update the screen now, save after a short pause. */
@@ -84,7 +93,7 @@ export function useNoteActions() {
         }, CONTENT_SAVE_DELAY),
       );
     },
-    [persist],
+    [persist, boardId],
   );
 
   /** Saves pending typing right away (on blur). */
@@ -97,7 +106,7 @@ export function useNoteActions() {
       const note = getQueryData<Note[]>(NOTES)?.find((n) => n.id === id);
       if (note) void persist(id, { content: note.content });
     },
-    [persist],
+    [persist, boardId],
   );
 
   const bringToFront = useCallback(
@@ -109,7 +118,7 @@ export function useNoteActions() {
       setQueryData<Note[]>(NOTES, (old) => (old ?? []).map((n) => (n.id === id ? { ...n, z } : n)).sort(byZ));
       void persist(id, { z });
     },
-    [persist],
+    [persist, boardId],
   );
 
   /** Deletes now; "Desfazer" recreates it with the same text, color and place. */
@@ -131,11 +140,12 @@ export function useNoteActions() {
         description: note.content.split('\n')[0]?.slice(0, 60) || undefined,
         action: {
           label: 'Desfazer',
-          onClick: () => void create(note.x, note.y, note.color, note.content, { w: note.w, h: note.h }),
+          onClick: () =>
+            void create(note.x, note.y, note.color, note.content, { w: note.w, h: note.h }, note.board_id),
         },
       });
     },
-    [toast, create],
+    [toast, create, boardId],
   );
 
   return { create, update, setContent, flush, bringToFront, remove };

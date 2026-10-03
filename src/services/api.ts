@@ -9,6 +9,8 @@
 import type {
   AppNotification,
   AuthUser,
+  Board,
+  BoardInput,
   Category,
   CategoryInput,
   DateContext,
@@ -78,9 +80,21 @@ export interface ProfileApi {
   update(patch: UserPreferencesPatch): Promise<UserPreferences>;
 }
 
+export interface BoardsApi {
+  /** Oldest first: the first one is the user's initial environment. */
+  list(): Promise<Board[]>;
+  create(input: BoardInput): Promise<Board>;
+  update(id: string, input: Partial<BoardInput>): Promise<Board>;
+  /** Also deletes the environment's notes. */
+  remove(id: string): Promise<void>;
+}
+
 export interface NotesApi {
-  list(): Promise<Note[]>;
-  create(input: Pick<Note, 'x' | 'y' | 'z' | 'color'> & { content?: string; w?: number | null; h?: number | null }): Promise<Note>;
+  /** Notes of one environment, bottom to top. */
+  list(boardId: string): Promise<Note[]>;
+  create(
+    input: Pick<Note, 'board_id' | 'x' | 'y' | 'z' | 'color'> & { content?: string; w?: number | null; h?: number | null },
+  ): Promise<Note>;
   update(id: string, patch: NotePatch): Promise<Note>;
   remove(id: string): Promise<void>;
 }
@@ -98,5 +112,6 @@ export interface Api {
   notifications: NotificationsApi;
   profile: ProfileApi;
   push: PushApi;
+  boards: BoardsApi;
   notes: NotesApi;
 }
