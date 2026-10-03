@@ -18,6 +18,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { search, path, navigate } = useRouter();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const isTablet = useMediaQuery('(min-width: 768px)');
+  const fullBleed = isTablet && path === '/quadro';
 
   useReminderDelivery(openTask);
 
@@ -57,7 +58,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {isTablet && <Sidebar compact={!isDesktop} />}
       <div className="flex min-w-0 flex-1 flex-col">
         <Header />
-        <main id="conteudo" tabIndex={-1} className="flex-1 px-4 pt-6 pb-28 focus:outline-none md:px-8 md:pt-8 md:pb-16">
+        <main
+          id="conteudo"
+          tabIndex={-1}
+          className={
+            // The board fills the whole area edge to edge on tablet/desktop.
+            fullBleed
+              ? 'flex min-h-0 flex-1 flex-col focus:outline-none'
+              : 'flex-1 px-4 pt-6 pb-28 focus:outline-none md:px-8 md:pt-8 md:pb-16'
+          }
+        >
           {children}
         </main>
       </div>

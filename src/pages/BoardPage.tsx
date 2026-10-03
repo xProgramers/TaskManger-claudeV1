@@ -59,8 +59,7 @@ function fitView(notes: Note[], width: number, height: number): View {
     maxY = Math.max(maxY, n.y + s.height);
   }
   const pad = 48;
-  const controls = 56; // keep the floating toolbar from covering the bottom notes
-  const usableH = height - pad * 2 - controls;
+  const usableH = height - pad * 2;
   const zoom = clamp(Math.min((width - pad * 2) / (maxX - minX), usableH / (maxY - minY), 1), MIN_ZOOM, MAX_ZOOM);
   return {
     zoom,
@@ -117,28 +116,27 @@ export function BoardPage() {
     if (note) setFocusId(note.id);
   };
 
+  if (isWide) {
+    return isError ? (
+      <div className="p-8">
+        <ErrorState message="Não foi possível carregar o quadro." onRetry={() => void refetch()} />
+      </div>
+    ) : (
+      <InfiniteBoard notes={list} loading={isLoading} setFocusId={setFocusId} cardProps={cardProps} />
+    );
+  }
+
+  // Phones: newest-on-top grid instead of a free board.
   return (
     <div className="flex w-full flex-col">
-      <PageTitle
-        title="Quadro"
-        subtitle={
-          isWide
-            ? 'Anotações rápidas que ficam até você apagar. Clique duas vezes num espaço vazio para criar uma nota.'
-            : 'Anotações rápidas que ficam até você apagar.'
-        }
-      >
-        {!isWide && (
-          <Button variant="primary" leading={<PlusIcon size={15} />} onClick={() => void createMobile()}>
-            Nota
-          </Button>
-        )}
+      <PageTitle title="Quadro" subtitle="Anotações rápidas que ficam até você apagar.">
+        <Button variant="primary" leading={<PlusIcon size={15} />} onClick={() => void createMobile()}>
+          Nota
+        </Button>
       </PageTitle>
-
       <div className="mt-6">
         {isError ? (
           <ErrorState message="Não foi possível carregar o quadro." onRetry={() => void refetch()} />
-        ) : isWide ? (
-          <InfiniteBoard notes={list} loading={isLoading} setFocusId={setFocusId} cardProps={cardProps} />
         ) : isLoading ? (
           <div className="grid gap-3">
             <Skeleton className="h-[150px] rounded-md" />
@@ -150,7 +148,6 @@ export function BoardPage() {
             <p className="text-base text-ink-2">Use o botão “Nota” para anotar algo rápido.</p>
           </div>
         ) : (
-          // Phones: newest-on-top grid instead of a free board.
           <div className="grid gap-3 sm:grid-cols-2">
             {[...list].reverse().map((n) => (
               <NoteCard key={n.id} mode="grid" {...cardProps(n)} />
@@ -332,7 +329,51 @@ function InfiniteBoard({ notes, loading, setFocusId, cardProps }: InfiniteBoardP
   const dot = 22 * v.zoom;
 
   return (
-    <div className="relative">
+    <div className="flex min-h-0 flex-1 flex-col">
+      {/* Toolbar: always visible, replaces the page title on this screen. */}
+      <div className="flex h-12 shrink-0 items-center gap-3 border-b border-line bg-bg px-4">
+        <h1 className="text-base font-semibold text-ink">
+          Quadro
+          {notes.length > 0 && (
+            <span className="tnum ml-2 font-normal text-ink-3">
+              {notes.length} {notes.length === 1 ? 'nota' : 'notas'}
+            </span>
+          )}
+        </h1>
+        <Button variant="primary" size="sm" leading={<PlusIcon size={14} />} onClick={createInView} className="ml-2">
+          Nova nota
+        </Button>
+        <p className="ml-2 hidden truncate text-xs text-ink-3 xl:block">
+          Clique duas vezes no fundo para criar. Arraste o fundo para mover. Ctrl + roda do mouse para zoom.
+        </p>
+        <div className="ml-auto flex items-center gap-0.5">
+          <IconButton size="sm" label="Diminuir zoom" onClick={() => zoomBy(1 / 1.2)} disabled={v.zoom <= MIN_ZOOM}>
+            <span className="text-lg leading-none">−</span>
+          </IconButton>
+          <button
+            type="button"
+            onClick={() => setView(zoomAt(v, 1, size.width / 2, size.height / 2))}
+            title="Voltar para 100% (tecla 0)"
+            aria-label={`Zoom ${Math.round(v.zoom * 100)}%. Voltar para 100%`}
+            className="tnum h-7 min-w-12 rounded-xs px-1.5 text-sm font-medium text-ink-2 hover:bg-hover hover:text-ink"
+          >
+            {Math.round(v.zoom * 100)}%
+          </button>
+          <IconButton size="sm" label="Aumentar zoom" onClick={() => zoomBy(1.2)} disabled={v.zoom >= MAX_ZOOM}>
+            <span className="text-lg leading-none">+</span>
+          </IconButton>
+          <span className="mx-1.5 h-5 w-px bg-line" aria-hidden="true" />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setView(fitView(notes, size.width, size.height))}
+            title="Enquadrar todas as notas (tecla F)"
+          >
+            Ajustar
+          </Button>
+        </div>
+      </div>
+
       <div
         ref={ref}
         role="region"
@@ -342,7 +383,7 @@ function InfiniteBoard({ notes, loading, setFocusId, cardProps }: InfiniteBoardP
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         onDoubleClick={onDoubleClick}
-        className={`relative h-[calc(100dvh-220px)] min-h-[460px] touch-none overflow-hidden rounded-md border border-line bg-surface select-none ${
+        className={`relative min-h-0 flex-1 touch-none overflow-hidden bg-surface select-none ${
           panning ? 'cursor-grabbing' : 'cursor-grab'
         }`}
         style={{
@@ -384,47 +425,11 @@ function InfiniteBoard({ notes, loading, setFocusId, cardProps }: InfiniteBoardP
               <StickyNoteIcon size={28} className="text-ink-3" />
               <p className="text-md font-semibold text-ink">Seu quadro está vazio.</p>
               <p className="max-w-[36ch] text-base text-ink-2">
-                Clique duas vezes em qualquer lugar para criar uma nota, ou use o botão “Nota”.
+                Clique duas vezes em qualquer lugar para criar uma nota, ou use “Nova nota” acima.
               </p>
             </div>
           )
         )}
-      </div>
-
-      {/* Controls float over the board. */}
-      <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-end justify-between gap-3">
-        <p className="pointer-events-auto hidden rounded-sm bg-surface/90 px-2.5 py-1.5 text-xs text-ink-3 shadow-[0_0_0_1px_var(--color-line)] backdrop-blur lg:block">
-          Arraste o fundo para mover. Ctrl + roda do mouse para zoom.
-        </p>
-        <div className="pointer-events-auto ml-auto flex items-center gap-1 rounded-md bg-surface/95 p-1 shadow-float backdrop-blur">
-          <Button variant="primary" size="sm" leading={<PlusIcon size={14} />} onClick={createInView}>
-            Nota
-          </Button>
-          <span className="mx-1 h-5 w-px bg-line" aria-hidden="true" />
-          <IconButton size="sm" label="Diminuir zoom" onClick={() => zoomBy(1 / 1.2)} disabled={v.zoom <= MIN_ZOOM}>
-            <span className="text-lg leading-none">−</span>
-          </IconButton>
-          <button
-            type="button"
-            onClick={() => setView(zoomAt(v, 1, size.width / 2, size.height / 2))}
-            title="Voltar para 100% (tecla 0)"
-            aria-label={`Zoom ${Math.round(v.zoom * 100)}%. Voltar para 100%`}
-            className="tnum h-7 min-w-12 rounded-xs px-1.5 text-sm font-medium text-ink-2 hover:bg-hover hover:text-ink"
-          >
-            {Math.round(v.zoom * 100)}%
-          </button>
-          <IconButton size="sm" label="Aumentar zoom" onClick={() => zoomBy(1.2)} disabled={v.zoom >= MAX_ZOOM}>
-            <span className="text-lg leading-none">+</span>
-          </IconButton>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setView(fitView(notes, size.width, size.height))}
-            title="Enquadrar todas as notas (tecla F)"
-          >
-            Ajustar
-          </Button>
-        </div>
       </div>
     </div>
   );
