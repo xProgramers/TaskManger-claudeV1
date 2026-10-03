@@ -3,7 +3,7 @@
  * demo database (see ./db.ts). Not used when Supabase is configured.
  */
 import type { Api, AuthEvent } from '@/services/api';
-import type { AppNotification, AuthUser, Note, Page, Task, TaskFilters } from '@/types';
+import type { AppNotification, AuthUser, Board, Note, Page, Task, TaskFilters } from '@/types';
 import { computeDueAt } from '@/utils/dates';
 import { AppError } from '@/utils/errors';
 import { compareChronological, isOverdue, periodRange, PRIORITY_ORDER } from '@/utils/task';
@@ -348,10 +348,49 @@ export const mockApi: Api = {
     async unregister() {},
   },
 
-  notes: {
+  boards: {
     async list() {
+      await latency(80);
+      return clone(demoDb().boards);
+    },
+    async create(input) {
+      await latency();
+      const db = demoDb();
+      const name = input.name.trim();
+      if (db.boards.some((b) => fold(b.name) === fold(name))) {
+        throw new AppError('Já existe um ambiente com esse nome.');
+      }
+      const now = new Date().toISOString();
+      const b: Board = { id: newId(), user_id: DEMO_USER.id, name, color: input.color, created_at: now, updated_at: now };
+      db.boards.push(b);
+      persist();
+      return clone(b);
+    },
+    async update(id, input) {
+      await latency();
+      const db = demoDb();
+      const b = db.boards.find((x) => x.id === id);
+      if (!b) throw new AppError('Este item não existe mais.');
+      if (input.name && db.boards.some((x) => x.id !== id && fold(x.name) === fold(input.name!))) {
+        throw new AppError('Já existe um ambiente com esse nome.');
+      }
+      Object.assign(b, input, input.name ? { name: input.name.trim() } : {}, { updated_at: new Date().toISOString() });
+      persist();
+      return clone(b);
+    },
+    async remove(id) {
+      await latency();
+      const db = demoDb();
+      db.boards = db.boards.filter((b) => b.id !== id);
+      db.notes = db.notes.filter((n) => n.board_id !== id);
+      persist();
+    },
+  },
+
+  notes: {
+    async list(boardId) {
       await latency(100);
-      return clone([...demoDb().notes].sort((a, b) => a.z - b.z));
+      return clone(demoDb().notes.filter((n) => n.board_id === boardId).sort((a, b) => a.z - b.z));
     },
     async create(input) {
       await latency(80);
@@ -359,6 +398,7 @@ export const mockApi: Api = {
       const note: Note = {
         id: newId(),
         user_id: DEMO_USER.id,
+        board_id: input.board_id,
         content: (input.content ?? '').slice(0, 2000),
         color: input.color,
         x: Math.round(input.x),

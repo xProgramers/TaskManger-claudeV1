@@ -53,7 +53,11 @@ export function toAppError(error: unknown, fallback: string): AppError {
   switch (e.code) {
     case '23505':
       return new AppError(
-        /categor/i.test(raw) ? 'Já existe uma categoria com esse nome.' : `${fallback} Esse item já existe.`,
+        /categor/i.test(raw)
+          ? 'Já existe uma categoria com esse nome.'
+          : /boards/i.test(raw)
+            ? 'Já existe um ambiente com esse nome.'
+            : `${fallback} Esse item já existe.`,
         error,
       );
     case '23514':

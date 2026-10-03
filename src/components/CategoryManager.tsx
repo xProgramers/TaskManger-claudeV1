@@ -1,38 +1,13 @@
 import { useState } from 'react';
 import type { Category } from '@/types';
-import { cn } from '@/utils/cn';
 import { CATEGORY_COLORS } from '@/utils/task';
 import { useTaskUI } from '@/contexts/TaskUIContext';
 import { useCategories, useCategoryActions } from '@/hooks/useCategories';
-import { CheckIcon, PencilIcon, PlusIcon, TrashIcon } from './icons';
+import { PencilIcon, PlusIcon, TrashIcon } from './icons';
 import { Button, IconButton } from './ui/Button';
 import { Dialog } from './ui/Layer';
+import { ColorPicker } from './ui/ColorPicker';
 import { ConfirmDialog } from './ConfirmDialog';
-
-function ColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
-  return (
-    <div role="radiogroup" aria-label="Cor" className="flex flex-wrap gap-1.5">
-      {CATEGORY_COLORS.map((c) => (
-        <button
-          key={c.value}
-          type="button"
-          role="radio"
-          aria-checked={value === c.value}
-          aria-label={c.name}
-          title={c.name}
-          onClick={() => onChange(c.value)}
-          className={cn(
-            'flex size-6 items-center justify-center rounded-full ring-offset-2 ring-offset-surface transition',
-            value === c.value && 'ring-2 ring-ink-2',
-          )}
-          style={{ background: c.value }}
-        >
-          {value === c.value && <CheckIcon size={12} strokeWidth={3} className="text-white" />}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 function CategoryEditor({
   initial,
@@ -94,7 +69,7 @@ function CategoryEditor({
         </Button>
       </div>
       {error && <p className="text-sm text-danger">{error}</p>}
-      <ColorPicker value={color} onChange={setColor} />
+      <ColorPicker value={color} onChange={setColor} colors={CATEGORY_COLORS} />
     </form>
   );
 }

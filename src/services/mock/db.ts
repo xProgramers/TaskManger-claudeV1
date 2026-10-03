@@ -9,6 +9,7 @@
  */
 import type {
   AppNotification,
+  Board,
   Category,
   Note,
   ISODate,
@@ -29,6 +30,7 @@ export interface DemoDb {
   categories: Category[];
   tasks: Task[];
   notifications: AppNotification[];
+  boards: Board[];
   notes: Note[];
   /** 2 = infinite board (world pixel coordinates). */
   boardVersion?: 2;
@@ -92,6 +94,11 @@ function seed(): DemoDb {
     ['Finanças', '#A0744B'],
     ['Saúde', '#B05B6E'],
   ].map(([name, color]) => ({ id: uid(), user_id: DEMO_USER.id, name, color, created_at: iso }));
+
+  const boards: Board[] = [
+    ['Pessoal', '#4F8A6E'],
+    ['Trabalho', '#5B7FA6'],
+  ].map(([name, color]) => ({ id: uid(), user_id: DEMO_USER.id, name, color, created_at: iso, updated_at: iso }));
   const cat = (name: string) => categories.find((c) => c.name === name)!.id;
 
   const make = (
@@ -174,14 +181,17 @@ function seed(): DemoDb {
     tasks,
     notifications: [],
     boardVersion: 2,
+    boards,
     notes: [
-      ['Todo dia\n• Beber 2 L de água\n• Revisar a agenda de amanhã\n• 20 min de leitura', 'yellow', 40, 40],
-      ['Senha do Wi-Fi do escritório está no cofre', 'blue', 340, 60],
-      ['Ideia: pedir orçamento de 3 marceneiros antes de fechar a estante', 'green', 640, 50],
-      ['Ligar para a Ana sobre a festa de sábado', 'pink', 90, 330],
-    ].map(([content, color, x, y], i) => ({
+      ['Todo dia\n• Beber 2 L de água\n• Revisar a agenda de amanhã\n• 20 min de leitura', 'yellow', 40, 40, 0],
+      ['Ideia: pedir orçamento de 3 marceneiros antes de fechar a estante', 'green', 340, 50, 0],
+      ['Ligar para a Ana sobre a festa de sábado', 'pink', 90, 330, 0],
+      ['Senha do Wi-Fi do escritório está no cofre', 'blue', 40, 40, 1],
+      ['Pauta da reunião de segunda\n• Metas do trimestre\n• Férias da equipe', 'yellow', 340, 60, 1],
+    ].map(([content, color, x, y, board], i) => ({
       id: uid(),
       user_id: DEMO_USER.id,
+      board_id: boards[board as number].id,
       content: content as string,
       color: color as Note['color'],
       x: x as number,
@@ -242,6 +252,16 @@ export function demoDb(): DemoDb {
           n.y = Math.round(n.y * 700);
         });
         db.boardVersion = 2;
+      }
+      // Demo data saved before environments existed: everything goes to "Geral".
+      if (!db.boards) {
+        const iso = new Date().toISOString();
+        const general: Board = { id: uid(), user_id: DEMO_USER.id, name: 'Geral', color: '#5B7FA6', created_at: iso, updated_at: iso };
+        db.boards = [general];
+        db.notes.forEach((n) => {
+          n.board_id = general.id;
+        });
+        persist();
       }
     }
   } catch {

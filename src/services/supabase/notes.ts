@@ -1,11 +1,11 @@
-import type { Note, NotePatch } from '@/types';
-import type { NotesApi } from '@/services/api';
+import type { Board, Note, NotePatch } from '@/types';
+import type { BoardsApi, NotesApi } from '@/services/api';
 import { toAppError } from '@/utils/errors';
 import { getSupabase } from './client';
 
 // The board is infinite: positions live in pos_x/pos_y (world pixels at 100% zoom).
 // They are exposed to the app as x/y. (The DB's own x/y columns are legacy.)
-const COLUMNS = 'id,user_id,content,color,x:pos_x,y:pos_y,z,w,h,created_at,updated_at';
+const COLUMNS = 'id,user_id,board_id,content,color,x:pos_x,y:pos_y,z,w,h,created_at,updated_at';
 const LIMIT = 100_000;
 const clampWorld = (v: number) => Math.round(Math.min(LIMIT, Math.max(-LIMIT, v)));
 
@@ -18,9 +18,47 @@ function toRow(patch: NotePatch) {
   };
 }
 
-export const supabaseNotes: NotesApi = {
+const BOARD_COLUMNS = 'id,user_id,name,color,created_at,updated_at';
+
+export const supabaseBoards: BoardsApi = {
   async list() {
-    const { data, error } = await getSupabase().from('notes').select(COLUMNS).order('z').limit(1000);
+    const { data, error } = await getSupabase().from('boards').select(BOARD_COLUMNS).order('created_at').order('id');
+    if (error) throw toAppError(error, 'Não foi possível carregar os ambientes.');
+    return (data ?? []) as Board[];
+  },
+  async create(input) {
+    const { data, error } = await getSupabase()
+      .from('boards')
+      .insert({ name: input.name.trim(), color: input.color })
+      .select(BOARD_COLUMNS)
+      .single();
+    if (error) throw toAppError(error, 'Não foi possível criar o ambiente.');
+    return data as Board;
+  },
+  async update(id, input) {
+    const { data, error } = await getSupabase()
+      .from('boards')
+      .update({ ...input, ...(input.name ? { name: input.name.trim() } : {}) })
+      .eq('id', id)
+      .select(BOARD_COLUMNS)
+      .single();
+    if (error) throw toAppError(error, 'Não foi possível salvar o ambiente.');
+    return data as Board;
+  },
+  async remove(id) {
+    const { error } = await getSupabase().from('boards').delete().eq('id', id);
+    if (error) throw toAppError(error, 'Não foi possível excluir o ambiente.');
+  },
+};
+
+export const supabaseNotes: NotesApi = {
+  async list(boardId) {
+    const { data, error } = await getSupabase()
+      .from('notes')
+      .select(COLUMNS)
+      .eq('board_id', boardId)
+      .order('z')
+      .limit(1000);
     if (error) throw toAppError(error, 'Não foi possível carregar o quadro.');
     return (data ?? []) as unknown as Note[];
   },
