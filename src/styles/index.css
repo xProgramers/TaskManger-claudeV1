@@ -125,6 +125,8 @@
   --p-accent-soft: #e2efe9;
   --p-late: #8f560d; /* ochre, 5.6:1 on surface */
   --p-late-soft: #f6ecdc;
+  --p-tint: 10%; /* today's rows: share of the tag colour mixed into the surface */
+  --p-tint-strong: 15%;
   --p-danger: #a8321f;
   --p-danger-soft: #f7e6e2;
   --p-overlay: rgb(16 22 19 / 0.32);
@@ -157,6 +159,8 @@
   --p-accent-soft: #1a2e27;
   --p-late: #dcab63;
   --p-late-soft: #2b2316;
+  --p-tint: 13%;
+  --p-tint-strong: 19%;
   --p-danger: #ef8a78;
   --p-danger-soft: #331d19;
   --p-overlay: rgb(0 0 0 / 0.55);
@@ -233,4 +237,17 @@
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Today's tasks: a light wash of the task's tag colour (accent when untagged)
+   plus a bar on the left. Solid colours, no transition, so the tint never
+   flickers to the page background while the pointer moves across rows. */
+.task-tint {
+  --tint: var(--color-accent);
+  background-color: color-mix(in oklab, var(--tint) var(--p-tint), var(--color-surface));
+  box-shadow: inset 3px 0 0 var(--tint);
+}
+.task-tint:hover,
+.task-tint:focus-within {
+  background-color: color-mix(in oklab, var(--tint) var(--p-tint-strong), var(--color-surface));
 }

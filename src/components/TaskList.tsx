@@ -22,7 +22,7 @@ interface TaskListProps {
   renderTrailing?: (task: Task) => ReactNode;
   className?: string;
   label?: string;
-  /** Tints each row with the accent (used for today's tasks). */
+  /** Tints each row with its tag colour (used for today's tasks). */
   highlight?: boolean;
 }
 

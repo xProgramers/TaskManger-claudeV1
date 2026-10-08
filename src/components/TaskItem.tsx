@@ -1,4 +1,4 @@
-import { memo, useState, type ReactNode } from 'react';
+import { memo, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Category, Task } from '@/types';
 import { cn } from '@/utils/cn';
 import { formatTime, relativeDayLabel } from '@/utils/dates';
@@ -43,7 +43,7 @@ export function TaskCheckbox({ checked, onChange, label, priority, tinted }: Tas
                 priority === 'high'
                   ? 'border-ink-2 border-[1.75px]'
                   : tinted
-                    ? 'border-accent/50 group-hover/check:border-accent'
+                    ? 'border-[color-mix(in_oklab,var(--tint)_55%,transparent)] group-hover/check:border-(--tint)'
                     : 'border-line-strong group-hover/check:border-ink-3',
               ),
         )}
@@ -66,7 +66,7 @@ export interface TaskItemProps {
   /** Extra trailing content (e.g. a "Reabrir" button on the completed screen). */
   trailing?: ReactNode;
   leaving?: boolean;
-  /** Light accent tint with a bar on the left (today's tasks). */
+  /** Light wash of the tag colour (accent when untagged) with a bar on the left (today's tasks). */
   highlight?: boolean;
 }
 
@@ -93,11 +93,10 @@ function TaskItemBase({ task, category, today, timeFormat, when = 'time', onTogg
       <div className="min-h-0 overflow-hidden">
         <div
           className={cn(
-            'group relative flex items-start gap-3 rounded-sm px-3 py-2.5 transition-colors duration-150',
-            highlight
-              ? 'rounded-md bg-accent-soft/65 shadow-[inset_3px_0_0_var(--color-accent)] hover:bg-accent-soft focus-within:bg-accent-soft'
-              : 'hover:bg-hover focus-within:bg-hover',
+            'group relative flex items-start gap-3 px-3 py-2.5',
+            highlight ? 'task-tint rounded-md' : 'rounded-sm transition-colors duration-150 hover:bg-hover focus-within:bg-hover',
           )}
+          style={highlight && category ? ({ '--tint': category.color } as CSSProperties) : undefined}
         >
           <div className="pt-px">
             <TaskCheckbox
