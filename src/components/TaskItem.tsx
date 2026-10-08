@@ -12,9 +12,10 @@ interface TaskCheckboxProps {
   onChange: () => void;
   label: string;
   priority: Task['priority'];
+  tinted?: boolean;
 }
 
-export function TaskCheckbox({ checked, onChange, label, priority }: TaskCheckboxProps) {
+export function TaskCheckbox({ checked, onChange, label, priority, tinted }: TaskCheckboxProps) {
   const [popKey, setPopKey] = useState(0);
   return (
     <button
@@ -38,7 +39,12 @@ export function TaskCheckbox({ checked, onChange, label, priority }: TaskCheckbo
             ? 'border-accent bg-accent text-accent-ink'
             : cn(
                 'text-transparent group-hover/check:text-ink-3',
-                priority === 'high' ? 'border-ink-2 border-[1.75px]' : 'border-line-strong group-hover/check:border-ink-3',
+                tinted && 'bg-surface',
+                priority === 'high'
+                  ? 'border-ink-2 border-[1.75px]'
+                  : tinted
+                    ? 'border-accent/50 group-hover/check:border-accent'
+                    : 'border-line-strong group-hover/check:border-ink-3',
               ),
         )}
       >
@@ -60,9 +66,11 @@ export interface TaskItemProps {
   /** Extra trailing content (e.g. a "Reabrir" button on the completed screen). */
   trailing?: ReactNode;
   leaving?: boolean;
+  /** Light accent tint with a bar on the left (today's tasks). */
+  highlight?: boolean;
 }
 
-function TaskItemBase({ task, category, today, timeFormat, when = 'time', onToggle, onOpen, trailing, leaving }: TaskItemProps) {
+function TaskItemBase({ task, category, today, timeFormat, when = 'time', onToggle, onOpen, trailing, leaving, highlight }: TaskItemProps) {
   const done = task.status === 'completed';
   const overdue = isOverdue(task);
   const time = task.due_time ? formatTime(task.due_time, timeFormat) : null;
@@ -85,8 +93,10 @@ function TaskItemBase({ task, category, today, timeFormat, when = 'time', onTogg
       <div className="min-h-0 overflow-hidden">
         <div
           className={cn(
-            'group relative flex items-start gap-3 rounded-sm px-3 py-2.5 transition-colors duration-150 hover:bg-hover',
-            'focus-within:bg-hover',
+            'group relative flex items-start gap-3 rounded-sm px-3 py-2.5 transition-colors duration-150',
+            highlight
+              ? 'rounded-md bg-accent-soft/65 shadow-[inset_3px_0_0_var(--color-accent)] hover:bg-accent-soft focus-within:bg-accent-soft'
+              : 'hover:bg-hover focus-within:bg-hover',
           )}
         >
           <div className="pt-px">
@@ -95,6 +105,7 @@ function TaskItemBase({ task, category, today, timeFormat, when = 'time', onTogg
               onChange={() => onToggle(task)}
               label={done ? `Reabrir: ${task.title}` : `Concluir: ${task.title}`}
               priority={task.priority}
+              tinted={highlight && !done}
             />
           </div>
 

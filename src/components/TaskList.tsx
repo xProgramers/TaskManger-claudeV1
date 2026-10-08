@@ -22,9 +22,11 @@ interface TaskListProps {
   renderTrailing?: (task: Task) => ReactNode;
   className?: string;
   label?: string;
+  /** Tints each row with the accent (used for today's tasks). */
+  highlight?: boolean;
 }
 
-export function TaskList({ tasks, hideCompleted, when = 'time', renderTrailing, className, label }: TaskListProps) {
+export function TaskList({ tasks, hideCompleted, when = 'time', renderTrailing, className, label, highlight }: TaskListProps) {
   const { today, timeFormat } = usePreferences();
   const { byId } = useCategories();
   const { openTask } = useTaskUI();
@@ -64,7 +66,7 @@ export function TaskList({ tasks, hideCompleted, when = 'time', renderTrailing, 
   const visible = hideCompleted ? tasks.filter((t) => t.status !== 'completed' || phases.has(t.id)) : tasks;
 
   return (
-    <ul className={cn('flex flex-col', className)} aria-label={label}>
+    <ul className={cn('flex flex-col', highlight && 'gap-1.5', className)} aria-label={label}>
       {visible.map((t) => {
         const leaving = t.status === 'completed' && phases.get(t.id) === 'collapsing';
         return (
@@ -77,6 +79,7 @@ export function TaskList({ tasks, hideCompleted, when = 'time', renderTrailing, 
               when={when}
               onToggle={onToggle}
               onOpen={openOne}
+              highlight={highlight}
               trailing={renderTrailing?.(t)}
               leaving={leaving}
             />

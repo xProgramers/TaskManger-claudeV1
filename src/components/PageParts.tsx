@@ -84,20 +84,31 @@ export function StatRow({ children }: { children: ReactNode }) {
 interface SectionProps {
   title: string;
   count?: number;
-  tone?: 'late';
+  tone?: 'late' | 'accent';
+  /** Small icon before the title. */
+  icon?: ReactNode;
   action?: ReactNode;
   children: ReactNode;
   id?: string;
 }
 
-export function Section({ title, count, tone, action, children, id }: SectionProps) {
+export function Section({ title, count, tone, icon, action, children, id }: SectionProps) {
   const headingId = id ?? `section-${title.toLowerCase().replace(/\s+/g, '-')}`;
   return (
     <section aria-labelledby={headingId} className="mt-8">
       <div className="mb-1.5 flex items-baseline justify-between gap-3 px-3">
-        <h2 id={headingId} className={cn('text-base font-semibold', tone === 'late' ? 'text-late' : 'text-ink')}>
+        <h2
+          id={headingId}
+          className={cn(
+            'flex items-center gap-1.5 text-base font-semibold',
+            tone === 'late' ? 'text-late' : tone === 'accent' ? 'text-accent' : 'text-ink',
+          )}
+        >
+          {icon}
           {title}
-          {count !== undefined && <span className="tnum ml-2 font-normal text-ink-3">{count}</span>}
+          {count !== undefined && (
+            <span className={cn('tnum ml-0.5 font-normal', tone === 'accent' ? 'text-accent/70' : 'text-ink-3')}>{count}</span>
+          )}
         </h2>
         {action}
       </div>

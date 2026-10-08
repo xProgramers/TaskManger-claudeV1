@@ -13,7 +13,7 @@ import { EmptyState, ErrorState } from '@/components/EmptyState';
 import { TaskListSkeleton } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 import { Kbd } from '@/components/ui/Form';
-import { ChevronDownIcon, ChevronRightIcon, LogoMark, PlusIcon } from '@/components/icons';
+import { ChevronDownIcon, ChevronRightIcon, LogoMark, PlusIcon, SunIcon } from '@/components/icons';
 
 function greeting(hour: number) {
   if (hour < 5) return 'Boa noite';
@@ -80,7 +80,12 @@ export function TodayPage() {
         </Section>
       )}
 
-      <Section title="Hoje" count={range.data ? pendingToday.length : undefined}>
+      <Section
+        title="Hoje"
+        tone="accent"
+        icon={<SunIcon size={15} />}
+        count={range.data ? pendingToday.length : undefined}
+      >
         <QuickAdd defaultDate={today} placeholder="Adicionar tarefa para hoje" />
         {range.isError ? (
           <ErrorState onRetry={() => void range.refetch()} />
@@ -103,7 +108,7 @@ export function TodayPage() {
             }
           />
         ) : (
-          <TaskList tasks={pendingToday} hideCompleted label="Tarefas de hoje" />
+          <TaskList tasks={pendingToday} hideCompleted highlight label="Tarefas de hoje" />
         )}
 
         {doneToday.length > 0 && (
