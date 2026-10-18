@@ -4,7 +4,7 @@ Gerenciador de tarefas pessoal em produção. Filosofia: poucas funcionalidades,
 
 ## Onde as coisas vivem
 - **Código**: este repositório (`main` = produção).
-- **Site**: https://task-manger-claude-v1.vercel.app — a Vercel publica automaticamente cada push no `main`.
+- **Site**: https://taskmanger-claudev1.mpotal.workers.dev — o Cloudflare Workers (Workers Builds) publica automaticamente cada push no `main`. Config em `wrangler.jsonc` e `public/_headers`; as variáveis `VITE_*` são build variables no painel do Cloudflare. A Vercel (task-manger-claude-v1.vercel.app) foi o host anterior.
 - **Backend**: Supabase, projeto `tarefas-app` (ref `yiishlvvnklntrrbrdyt`, região São Paulo). Auth, Postgres com RLS, Realtime, pg_cron e a Edge Function `send-reminders`.
 - Segredos (chaves VAPID, segredo do dispatcher) ficam no Supabase Vault, nunca no repositório.
 
@@ -24,9 +24,9 @@ Gerenciador de tarefas pessoal em produção. Filosofia: poucas funcionalidades,
 - Depois de alterar o schema, regenere `src/types/database.ts` e rode os advisors de segurança do Supabase.
 
 ## Antes de dar algo por pronto
-1. `npm test` e `npm run build` (o build roda `tsc -b`; erro de tipo quebra o deploy da Vercel).
+1. `npm test` e `npm run build` (o build roda `tsc -b`; erro de tipo quebra o deploy).
 2. Testar o fluxo na interface (dá para usar `npm run dev:demo` sem backend).
-3. Commit e push no `main`; acompanhar o deploy na Vercel.
+3. Commit e push no `main`; acompanhar o deploy no Cloudflare.
 
 ## Quadro (notas adesivas)
 Tela `/quadro`: quadro infinito com pan (arrastar o fundo, roda do mouse) e zoom 25–200% (Ctrl+roda, pinça, botões, teclas + - 0 F). Posição das notas em pixels do "mundo" a 100% (`notes.pos_x/pos_y`, expostas no app como `x/y`; as colunas antigas `x/y` são legado). `z` é a ordem de empilhamento; `w`/`h` o tamanho em pixels (null = padrão). A visão (pan/zoom) fica no localStorage de cada aparelho. No celular vira grade. Sem setas, formas ou desenhos.
