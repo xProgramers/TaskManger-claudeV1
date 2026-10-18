@@ -1,0 +1,3 @@
+# O service worker nunca pode ficar em cache, senão correções dos lembretes não chegam.
+/sw.js
+  Cache-Control: no-cache

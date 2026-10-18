@@ -1,0 +1,10 @@
+// Cloudflare Workers: publica o build do Vite (dist/) como site estático.
+// Rotas desconhecidas caem no index.html (SPA). Cabeçalhos em public/_headers.
+{
+  "name": "taskmanger-claudev1",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}
