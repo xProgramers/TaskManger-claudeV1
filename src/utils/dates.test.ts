@@ -5,6 +5,7 @@ import {
   addMonths,
   computeDueAt,
   formatTime,
+  parseTimeInput,
   monthGrid,
   relativeDayLabel,
   startOfWeek,
@@ -70,4 +71,17 @@ test('time formats', () => {
   assert.equal(formatTime('18:00', '12h'), '6:00 PM');
   assert.equal(formatTime('00:15', '12h'), '12:15 AM');
   assert.equal(formatTime('09:05', '24h'), '09:05');
+});
+
+test('typed times are parsed in the formats people actually write', () => {
+  for (const [input, want] of [
+    ['21:30', '21:30'], ['21.30', '21:30'], ['2130', '21:30'], ['930', '09:30'], ['9', '09:00'],
+    ['21h', '21:00'], ['21h30', '21:30'], ['9:30 pm', '21:30'], ['9pm', '21:00'], ['12am', '00:00'],
+    ['12 PM', '12:00'], [' 07:05 ', '07:05'], ['0:00', '00:00'],
+  ] as const) {
+    assert.equal(parseTimeInput(input), want, input);
+  }
+  for (const input of ['', '24:00', '21:60', '13pm', 'abc', '12345', '9:5']) {
+    assert.equal(parseTimeInput(input), null, input);
+  }
 });

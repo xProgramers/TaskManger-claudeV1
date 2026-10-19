@@ -260,6 +260,25 @@ export function normalizeTime(time: ISOTime): ISOTime {
   return time.slice(0, 5);
 }
 
+/**
+ * Typed time → "HH:MM", or null when it isn't a valid time.
+ * Accepts "21:30", "21.30", "2130", "930", "9", "21h", "21h30", "9:30 pm", "9pm".
+ */
+export function parseTimeInput(input: string): ISOTime | null {
+  const s = input.trim().toLowerCase().replace(/\s+/g, '');
+  const m = /^(\d{1,2})(?:[:.h]?(\d{2}))?(h|am|pm|a|p)?$/.exec(s);
+  if (!m) return null;
+  let h = Number(m[1]);
+  const min = m[2] ? Number(m[2]) : 0;
+  const ampm = m[3]?.startsWith('a') ? 'am' : m[3]?.startsWith('p') ? 'pm' : null;
+  if (ampm) {
+    if (h < 1 || h > 12) return null;
+    h = (h % 12) + (ampm === 'pm' ? 12 : 0);
+  }
+  if (h > 23 || min > 59) return null;
+  return `${pad(h)}:${pad(min)}`;
+}
+
 /** "18:00" or "6:00 PM" */
 export function formatTime(time: ISOTime, format: TimeFormat): string {
   const [h, m] = normalizeTime(time).split(':').map(Number);

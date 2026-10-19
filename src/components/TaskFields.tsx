@@ -12,6 +12,7 @@ import {
   formatReminderOffset,
   formatTime,
   formatWeekdayShort,
+  parseTimeInput,
   relativeDayLabel,
   startOfWeek,
   weekdayOf,
@@ -156,6 +157,7 @@ interface TimeChipProps {
 export function TimeChip({ value, format, disabled, onChange }: TimeChipProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value ?? '');
+  const [invalid, setInvalid] = useState(false);
   const ref = useRef<HTMLButtonElement>(null);
   const pick = (t: ISOTime | null) => {
     onChange(t);
@@ -170,7 +172,8 @@ export function TimeChip({ value, format, disabled, onChange }: TimeChipProps) {
         active={Boolean(value)}
         disabled={disabled}
         onClick={() => {
-          setDraft(value ?? '');
+          setDraft(value ? formatTime(value, format) : '');
+          setInvalid(false);
           setOpen((o) => !o);
         }}
         aria-haspopup="dialog"
@@ -182,25 +185,48 @@ export function TimeChip({ value, format, disabled, onChange }: TimeChipProps) {
         <span className="tnum">{value ? formatTime(value, format) : 'Horário'}</span>
       </Chip>
       <Popover open={open} onClose={() => setOpen(false)} anchor={ref} label="Escolher horário" className="w-56">
+        {/* Plain text instead of type="time": the native field changes with the browser's
+            language (AM/PM segments) and silently yields "" when left incomplete. */}
         <form
           className="flex gap-1.5 p-1.5"
           onSubmit={(e) => {
             e.preventDefault();
-            if (/^\d{2}:\d{2}$/.test(draft)) pick(draft);
+            // The popover is portaled, but React still bubbles submit to the task form
+            // around it, which would save the task before this time lands in its state.
+            e.stopPropagation();
+            const t = parseTimeInput(draft);
+            if (t) pick(t);
+            else setInvalid(true);
           }}
         >
           <input
-            type="time"
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
             aria-label="Horário"
+            aria-invalid={invalid}
+            aria-describedby={invalid ? 'time-chip-error' : undefined}
+            placeholder={format === '24h' ? '21:30' : '9:30 PM'}
             data-autofocus
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            className="tnum h-8 min-w-0 flex-1 rounded-sm border border-line bg-surface px-2 text-base text-ink focus:border-accent focus:outline-none"
+            onChange={(e) => {
+              setDraft(e.target.value);
+              setInvalid(false);
+            }}
+            className={cn(
+              'tnum h-8 min-w-0 flex-1 rounded-sm border bg-surface px-2 text-base text-ink placeholder:text-ink-3 focus:outline-none',
+              invalid ? 'border-danger focus:border-danger' : 'border-line focus:border-accent',
+            )}
           />
           <button type="submit" className="h-8 rounded-sm bg-accent px-3 text-sm font-semibold text-accent-ink hover:bg-accent-hover">
             OK
           </button>
         </form>
+        {invalid && (
+          <p id="time-chip-error" role="alert" className="px-2.5 pb-1.5 text-xs text-danger">
+            Horário inválido. Use, por exemplo, {format === '24h' ? '21:30' : '9:30 PM'}.
+          </p>
+        )}
         <div className="grid grid-cols-3 gap-1 border-t border-line p-1.5">
           {TIME_SLOTS.map((t) => (
             <button
