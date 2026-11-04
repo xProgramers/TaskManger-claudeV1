@@ -5,7 +5,7 @@ import { toAppError } from '@/utils/errors';
 import { getSupabase } from './client';
 
 const COLUMNS =
-  'id,user_id,title,description,status,priority,due_date,due_time,timezone,due_at,reminder_offset_minutes,category_id,completed_at,created_at,updated_at';
+  'id,user_id,title,description,status,priority,due_date,due_time,timezone,due_at,reminder_offset_minutes,recurrence,category_id,completed_at,created_at,updated_at';
 
 const asTask = (row: unknown) => row as Task;
 const asTasks = (rows: unknown) => (rows ?? []) as Task[];
@@ -178,6 +178,15 @@ export const supabaseTasks: TasksApi = {
       .single();
     if (error) throw toAppError(error, 'Não foi possível salvar a tarefa.');
     return asTask(data);
+  },
+
+  async reschedule(ids, date, timezone) {
+    const { data, error } = await from()
+      .update({ due_date: date, timezone })
+      .in('id', ids)
+      .select(COLUMNS);
+    if (error) throw toAppError(error, 'Não foi possível mudar a data das tarefas.');
+    return asTasks(data);
   },
 
   async remove(id) {

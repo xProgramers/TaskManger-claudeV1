@@ -11,11 +11,14 @@
  *   times     18h, 18h30, 18:30, às 9, meio-dia, "9h da noite"
  *   priority  !alta  !média  !baixa
  *   category  #nome  (only when a category with that name exists)
+ *   repeat    todo dia, dias úteis, toda segunda, toda semana, todo dia 5,
+ *             todo mês, todo ano (no date = starts today)
  */
-import type { ISODate, ISOTime, TaskPriority } from '../types/index.ts';
-import { addDays, isValidISODate, parseDate, toISODate, weekdayOf } from './dates.ts';
+import type { ISODate, ISOTime, Recurrence, TaskPriority } from '../types/index.ts';
+import { addDays, addMonths, isValidISODate, parseDate, toISODate, weekdayOf } from './dates.ts';
+import { firstOccurrence, nextOccurrence } from './recurrence.ts';
 
-export type QuickTokenKind = 'date' | 'time' | 'priority' | 'category';
+export type QuickTokenKind = 'repeat' | 'date' | 'time' | 'priority' | 'category';
 
 export interface QuickToken {
   kind: QuickTokenKind;
@@ -30,6 +33,7 @@ export interface QuickParseResult {
   time: ISOTime | null;
   priority: TaskPriority | null;
   categoryId: string | null;
+  recurrence: Recurrence | null;
   tokens: QuickToken[];
 }
 
@@ -105,7 +109,36 @@ function toTime(h: number, m: number, period?: string): ISOTime | null {
   return `${pad(hour)}:${pad(m)}`;
 }
 
+/** Day `day` of this month, or of the next month that has it, not before today. */
+function monthlyDay(today: ISODate, day: number): ISODate | null {
+  for (let i = 0; i < 3; i++) {
+    const candidate = `${addMonths(today, i).slice(0, 8)}${pad(day)}`;
+    if (isValidISODate(candidate) && candidate >= today) return candidate;
+  }
+  return null;
+}
+
+const repeat = (re: string, resolve: Rule['resolve']): Rule => ({
+  kind: 'repeat',
+  re: new RegExp(`(?:^|\\s)(?:${re})${END}`, 'g'),
+  resolve,
+});
+
+// Repeat rules come first so "todo dia 5" / "toda segunda" are not read as plain dates.
 const RULES: Rule[] = [
+  repeat('todo dia util|todos os dias uteis|(?:nos |em )?dias uteis|de segunda a sexta', () => ({ recurrence: 'weekdays' })),
+  repeat('todo dia (\\d{1,2})(?: d[eo] (?:cada )?mes)?', (m, ctx) => {
+    const date = monthlyDay(ctx.today, Number(m[1]));
+    return date ? { recurrence: 'monthly', date } : null;
+  }),
+  repeat(
+    'tod[oa]s?\\s+(?:[ao]s\\s+)?(domingo|segunda|terca|quarta|quinta|sexta|sabado)s?(?:-feiras?)?',
+    (m, ctx) => ({ recurrence: 'weekly', date: addDays(ctx.today, (WEEKDAYS[m[1]] - weekdayOf(ctx.today) + 7) % 7) }),
+  ),
+  repeat('todo dia|todos os dias|diariamente|cada dia', () => ({ recurrence: 'daily' })),
+  repeat('toda semana|todas as semanas|semanalmente|cada semana', () => ({ recurrence: 'weekly' })),
+  repeat('todo mes|todos os meses|mensalmente|cada mes', () => ({ recurrence: 'monthly' })),
+  repeat('todo ano|todos os anos|anualmente|cada ano', () => ({ recurrence: 'yearly' })),
   {
     kind: 'date',
     re: new RegExp(`${LEAD}(depois de amanha)${END}`, 'g'),
@@ -188,6 +221,7 @@ export function parseQuickAdd(input: string, ctx: QuickParseContext): QuickParse
     time: null,
     priority: null,
     categoryId: null,
+    recurrence: null,
     tokens: [],
   };
   const taken: [number, number][] = [];
@@ -209,6 +243,15 @@ export function parseQuickAdd(input: string, ctx: QuickParseContext): QuickParse
       taken.push([start, end]);
       result.tokens.push({ kind: rule.kind, start, end, text: input.slice(start, end) });
       break;
+    }
+  }
+
+  // A repeating task without a date starts at its first date that is still ahead.
+  const explicitDate = result.tokens.some((t) => t.kind === 'date');
+  if (result.recurrence && !explicitDate) {
+    result.date ??= firstOccurrence(result.recurrence, ctx.today);
+    if (result.date === ctx.today && result.time && result.time <= ctx.nowTime) {
+      result.date = nextOccurrence(result.recurrence, result.date, ctx.today);
     }
   }
 

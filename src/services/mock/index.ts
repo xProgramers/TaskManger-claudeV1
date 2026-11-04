@@ -4,7 +4,8 @@
  */
 import type { Api, AuthEvent } from '@/services/api';
 import type { AppNotification, AuthUser, Board, Note, Page, Task, TaskFilters } from '@/types';
-import { computeDueAt } from '@/utils/dates';
+import { computeDueAt, todayIn } from '@/utils/dates';
+import { nextOccurrence } from '@/utils/recurrence';
 import { AppError } from '@/utils/errors';
 import { compareChronological, isOverdue, periodRange, PRIORITY_ORDER } from '@/utils/task';
 import { DEMO_USER, demoDb, latency, newId, persist, syncReminder } from './db';
@@ -206,6 +207,7 @@ export const mockApi: Api = {
         timezone,
         due_at: null,
         reminder_offset_minutes: input.due_date ? (input.reminder_offset_minutes ?? null) : null,
+        recurrence: input.due_date ? (input.recurrence ?? null) : null,
         category_id: input.category_id ?? null,
         completed_at: null,
         created_at: now,
@@ -230,6 +232,11 @@ export const mockApi: Api = {
       if (!task.due_date) {
         task.due_time = null;
         task.reminder_offset_minutes = null;
+        task.recurrence = null;
+      } else if (task.recurrence && prevStatus === 'pending' && task.status === 'completed') {
+        // Same as the database: a repeating task moves to its next date.
+        task.status = 'pending';
+        task.due_date = nextOccurrence(task.recurrence, task.due_date, todayIn(task.timezone));
       }
       task.due_at = computeDueAt(task.due_date, task.due_time, task.timezone);
       if (task.status !== prevStatus) task.completed_at = task.status === 'completed' ? new Date().toISOString() : null;
@@ -237,6 +244,9 @@ export const mockApi: Api = {
       syncReminder(db, task);
       persist();
       return clone(task);
+    },
+    async reschedule(ids, date, timezone) {
+      return Promise.all(ids.map((id) => mockApi.tasks.update(id, { due_date: date }, timezone)));
     },
     async remove(id) {
       await latency();
@@ -313,6 +323,25 @@ export const mockApi: Api = {
     async remove(id) {
       const db = demoDb();
       db.notifications = db.notifications.filter((n) => n.id !== id);
+      persist();
+    },
+    async snooze(id, minutes) {
+      const db = demoDb();
+      const n = db.notifications.find((x) => x.id === id);
+      if (!n?.task_id) throw new AppError('Este lembrete não existe mais.');
+      const now = new Date();
+      db.notifications = db.notifications.filter((x) => !(x.task_id === n.task_id && x.status === 'pending'));
+      db.notifications.push({
+        ...n,
+        id: newId(),
+        title: 'Lembrete adiado',
+        scheduled_for: new Date(now.getTime() + minutes * 60_000).toISOString(),
+        status: 'pending',
+        sent_at: null,
+        read_at: null,
+        created_at: now.toISOString(),
+      });
+      if (n.status === 'sent') Object.assign(n, { status: 'read', read_at: now.toISOString() });
       persist();
     },
     subscribe(_userId, onDelivered) {

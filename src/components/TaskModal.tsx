@@ -22,6 +22,7 @@ export function TaskModal() {
             priority: 'medium',
             category_id: createDefaults.category_id ?? null,
             reminder_offset_minutes: null,
+            recurrence: null,
           }}
           onSubmit={async (input) => {
             await create(input);

@@ -30,7 +30,7 @@ export function TaskList({ tasks, hideCompleted, when = 'time', renderTrailing, 
   const { today, timeFormat } = usePreferences();
   const { byId } = useCategories();
   const { openTask } = useTaskUI();
-  const { setStatus } = useTaskActions();
+  const { setStatus, postpone } = useTaskActions();
   const [phases, setPhases] = useState<Map<string, Phase>>(() => new Map());
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -50,7 +50,8 @@ export function TaskList({ tasks, hideCompleted, when = 'time', renderTrailing, 
   const onToggle = useCallback(
     (task: Task) => {
       const completing = task.status !== 'completed';
-      if (completing && hideCompleted) {
+      // A repeating task stays pending (it moves to its next date), so it doesn't collapse here.
+      if (completing && hideCompleted && !task.recurrence) {
         setPhase(task.id, 'checked');
         timers.current.push(
           setTimeout(() => setPhase(task.id, 'collapsing'), CHECK_MS),
@@ -79,6 +80,7 @@ export function TaskList({ tasks, hideCompleted, when = 'time', renderTrailing, 
               when={when}
               onToggle={onToggle}
               onOpen={openOne}
+              onPostpone={postpone}
               highlight={highlight}
               trailing={renderTrailing?.(t)}
               leaving={leaving}

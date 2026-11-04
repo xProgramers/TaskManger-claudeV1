@@ -4,8 +4,8 @@
  * returns focus to the chip.
  */
 import { useRef, useState, type ReactNode, type Ref } from 'react';
-import type { Category, ISODate, ISOTime, ReminderOffset, TaskPriority, TimeFormat } from '@/types';
-import { REMINDER_OFFSETS } from '@/types';
+import type { Category, ISODate, ISOTime, Recurrence, ReminderOffset, TaskPriority, TimeFormat } from '@/types';
+import { RECURRENCES, REMINDER_OFFSETS } from '@/types';
 import { cn } from '@/utils/cn';
 import {
   addDays,
@@ -17,8 +17,9 @@ import {
   startOfWeek,
   weekdayOf,
 } from '@/utils/dates';
+import { recurrenceLabel } from '@/utils/recurrence';
 import { PRIORITY_LABEL } from '@/utils/task';
-import { BellIcon, CalendarIcon, CheckIcon, ClockIcon, TagIcon, XIcon } from '@/components/icons';
+import { BellIcon, CalendarIcon, CheckIcon, ClockIcon, RepeatIcon, TagIcon, XIcon } from '@/components/icons';
 import { CategoryDot, PriorityGlyph } from '@/components/Badges';
 import { Menu, MenuItem, MenuSeparator, Popover } from '@/components/ui/Layer';
 import { MiniCalendar } from '@/components/ui/MiniCalendar';
@@ -244,6 +245,52 @@ export function TimeChip({ value, format, disabled, onChange }: TimeChipProps) {
         </div>
       </Popover>
     </>
+  );
+}
+
+// --- Repeat -------------------------------------------------------------------
+
+interface RepeatChipProps {
+  value: Recurrence | null;
+  /** The task's date: labels follow it ("Toda segunda", "Todo dia 5"). */
+  date: ISODate | null;
+  onChange: (value: Recurrence | null) => void;
+}
+
+export function RepeatChip({ value, date, onChange }: RepeatChipProps) {
+  return (
+    <Menu
+      label="Repetir"
+      align="start"
+      trigger={(t) => (
+        <Chip
+          buttonRef={t.ref}
+          onClick={t.onClick}
+          aria-haspopup={t['aria-haspopup']}
+          aria-expanded={t['aria-expanded']}
+          disabled={!date}
+          icon={<RepeatIcon size={14} />}
+          active={value !== null}
+          onClear={() => onChange(null)}
+          clearLabel="Não repetir"
+          label={!date ? 'Repetir (defina uma data antes)' : value ? `Repete: ${recurrenceLabel(value, date)}. Alterar` : 'Repetir'}
+        >
+          {value ? recurrenceLabel(value, date) : 'Repetir'}
+        </Chip>
+      )}
+    >
+      {RECURRENCES.map((r) => (
+        <MenuItem key={r} onSelect={() => onChange(r)} hint={value === r ? <CheckIcon size={14} className="text-accent" /> : null}>
+          {recurrenceLabel(r, date)}
+        </MenuItem>
+      ))}
+      {value && (
+        <>
+          <MenuSeparator />
+          <MenuItem onSelect={() => onChange(null)}>Não repetir</MenuItem>
+        </>
+      )}
+    </Menu>
   );
 }
 

@@ -3,6 +3,8 @@ import type { AppNotification } from '@/types';
 import { api } from '@/services';
 import { invalidateQueries, setQueryData, useQuery } from '@/lib/query';
 import { showSystemNotification, syncPushSubscription } from '@/lib/browserNotifications';
+import { TASKS } from '@/hooks/useTasks';
+import { errorMessage } from '@/utils/errors';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { useToast } from '@/contexts/ToastContext';
@@ -44,8 +46,10 @@ export function useNotifications() {
  */
 export function useReminderDelivery(openTask: (id: string) => void) {
   const { user } = useAuth();
-  const { prefs } = usePreferences();
+  const { prefs, timezone } = usePreferences();
   const { toast } = useToast();
+  const timezoneRef = useRef(timezone);
+  timezoneRef.current = timezone;
   const enabled = prefs?.notifications_enabled ?? true;
   const openRef = useRef(openTask);
   openRef.current = openTask;
@@ -64,7 +68,7 @@ export function useReminderDelivery(openTask: (id: string) => void) {
         action: n.task_id ? { label: 'Abrir', onClick: () => openRef.current(n.task_id!) } : undefined,
       });
       if (document.visibilityState !== 'visible') {
-        void showSystemNotification(n.id, n.title, n.message, n.task_id ? `/?task=${n.task_id}` : '/');
+        void showSystemNotification(n.id, n.title, n.message, n.task_id);
       }
     });
 
@@ -87,13 +91,34 @@ export function useReminderDelivery(openTask: (id: string) => void) {
   // Clicks on a system notification while a tab is open.
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
+    const runAction = async (action: string, id: string, taskId: string) => {
+      try {
+        if (action === 'complete') {
+          await api.tasks.update(taskId, { status: 'completed' }, timezoneRef.current);
+          toast({ message: 'Tarefa concluída' });
+        } else {
+          await api.notifications.snooze(id, 60);
+          toast({ message: 'Lembrete adiado', description: 'Vou te lembrar de novo em 1 hora.' });
+        }
+      } catch (err) {
+        toast({ message: errorMessage(err, 'Não foi possível fazer isso agora.'), tone: 'error' });
+      }
+      invalidateQueries(TASKS);
+      invalidateQueries(NOTIFICATIONS);
+    };
     const onMessage = (e: MessageEvent) => {
-      const data = e.data as { type?: string; url?: string } | null;
-      if (data?.type !== 'prumo:open' || !data.url) return;
-      const taskId = new URL(data.url, window.location.origin).searchParams.get('task');
-      if (taskId) openRef.current(taskId);
+      const data = e.data as { type?: string; url?: string; action?: string; id?: string; taskId?: string } | null;
+      if (data?.type === 'prumo:open' && data.url) {
+        const taskId = new URL(data.url, window.location.origin).searchParams.get('task');
+        if (taskId) openRef.current(taskId);
+      } else if (data?.type === 'prumo:action' && data.action && data.id && data.taskId) {
+        void runAction(data.action, data.id, data.taskId);
+      } else if (data?.type === 'prumo:refresh') {
+        invalidateQueries(TASKS);
+        invalidateQueries(NOTIFICATIONS);
+      }
     };
     navigator.serviceWorker.addEventListener('message', onMessage);
     return () => navigator.serviceWorker.removeEventListener('message', onMessage);
-  }, []);
+  }, [toast]);
 }

@@ -120,6 +120,7 @@ function seed(): DemoDb {
     timezone: tz,
     due_at: computeDueAt(day, time, tz),
     reminder_offset_minutes: (time ? 15 : null) as ReminderOffset | null,
+    recurrence: null,
     category_id: category ? cat(category) : null,
     completed_at: null,
     created_at: new Date(now.getTime() - 3 * 86_400_000).toISOString(),
@@ -138,7 +139,7 @@ function seed(): DemoDb {
       description: 'Consolidar números de setembro e enviar para a diretoria.',
     }),
     make('Estudar documentação da API', today, '14:00', 'medium', 'Estudos'),
-    make('Academia', today, '17:00', 'low', 'Saúde'),
+    make('Academia', today, '17:00', 'low', 'Saúde', { recurrence: 'weekdays' }),
     make('Jantar com a Marina', today, '20:00', 'medium', 'Pessoal'),
     make('Responder e-mails pendentes', today, null, 'medium', 'Trabalho'),
     make('Pagar fatura do cartão', addDays(today, -1), null, 'high', 'Finanças', {

@@ -118,6 +118,8 @@ export const TagIcon = make(
     <circle cx="8" cy="8" r="1.4" />
   </>,
 );
+export const SnoozeIcon = make('SnoozeIcon', <path d="M12 8v4l2.5 1.5M20.5 12a8.5 8.5 0 1 1-2.5-6M21 3v4h-4" />);
+export const RepeatIcon = make('RepeatIcon', <path d="M17 3l3 3-3 3M4 12v-1a5 5 0 0 1 5-5h11M7 21l-3-3 3-3M20 12v1a5 5 0 0 1-5 5H4" />);
 export const TextIcon = make('TextIcon', <path d="M4 6h16M4 11h16M4 16h10" />);
 export const MoonIcon = make('MoonIcon', <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z" />);
 export const MonitorIcon = make(

@@ -228,6 +228,7 @@ export type Database = {
           id: string;
           priority: Database['public']['Enums']['task_priority'];
           reminder_offset_minutes: number | null;
+          recurrence: string | null;
           status: Database['public']['Enums']['task_status'];
           timezone: string;
           title: string;
@@ -245,6 +246,7 @@ export type Database = {
           id?: string;
           priority?: Database['public']['Enums']['task_priority'];
           reminder_offset_minutes?: number | null;
+          recurrence?: string | null;
           status?: Database['public']['Enums']['task_status'];
           timezone?: string;
           title: string;
@@ -262,6 +264,7 @@ export type Database = {
           id?: string;
           priority?: Database['public']['Enums']['task_priority'];
           reminder_offset_minutes?: number | null;
+          recurrence?: string | null;
           status?: Database['public']['Enums']['task_status'];
           timezone?: string;
           title?: string;
@@ -287,6 +290,8 @@ export type Database = {
         Returns: undefined;
       };
       unregister_push_subscription: { Args: { p_endpoint: string }; Returns: undefined };
+      snooze_reminder: { Args: { p_notification_id: string; p_minutes?: number }; Returns: string };
+      next_occurrence: { Args: { p_rule: string; p_due: string; p_today: string }; Returns: string };
     };
     Enums: {
       notification_status: 'pending' | 'sent' | 'read';

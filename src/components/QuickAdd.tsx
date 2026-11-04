@@ -3,6 +3,7 @@ import type { ISODate } from '@/types';
 import { cn } from '@/utils/cn';
 import { formatDayMonthShort, formatTime, nowTimeIn, relativeDayLabel } from '@/utils/dates';
 import { parseQuickAdd } from '@/utils/quickAdd';
+import { recurrenceLabel } from '@/utils/recurrence';
 import { PRIORITY_LABEL } from '@/utils/task';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { useCategories } from '@/hooks/useCategories';
@@ -45,6 +46,7 @@ export function QuickAdd({ defaultDate, placeholder = 'Adicionar tarefa', catego
         priority: parsed.priority ?? 'medium',
         category_id: parsed.categoryId ?? categoryId,
         reminder_offset_minutes: date && parsed.time ? (prefs?.default_reminder_minutes ?? null) : null,
+        recurrence: date ? parsed.recurrence : null,
       });
       setText('');
     } catch {
@@ -57,6 +59,7 @@ export function QuickAdd({ defaultDate, placeholder = 'Adicionar tarefa', catego
   const summary: string[] = [];
   if (parsed?.date) summary.push(`${relativeDayLabel(parsed.date, today)} (${formatDayMonthShort(parsed.date)})`);
   if (parsed?.time) summary.push(formatTime(parsed.time, timeFormat));
+  if (parsed?.recurrence) summary.push(recurrenceLabel(parsed.recurrence, parsed.date).toLowerCase());
   if (parsed?.priority) summary.push(`prioridade ${PRIORITY_LABEL[parsed.priority].toLowerCase()}`);
   if (parsed?.categoryId) summary.push(byId.get(parsed.categoryId)?.name ?? '');
 
