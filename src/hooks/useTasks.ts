@@ -1,10 +1,11 @@
 import { useCallback, useState } from 'react';
-import type { Page, Task, TaskFilters, TaskInput, TaskPatch, TaskStatus } from '@/types';
+import type { ISODate, Page, Task, TaskFilters, TaskInput, TaskPatch, TaskStatus } from '@/types';
 import { api } from '@/services';
 import { getQueryData, invalidateQueries, setQueryData, updateQueries, useQuery, type QueryKey } from '@/lib/query';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { useToast } from '@/contexts/ToastContext';
-import { computeDueAt } from '@/utils/dates';
+import { computeDueAt, relativeDayLabel } from '@/utils/dates';
+import { nextOccurrence } from '@/utils/recurrence';
 import { errorMessage } from '@/utils/errors';
 
 export const TASKS = ['tasks'] as const;
@@ -137,16 +138,21 @@ function removeTaskFromCache(id: string) {
   updateQueries(TASKS, (data) => mapTasksIn(data, (t) => (t.id === id ? null : t)));
 }
 
-function applyPatch(task: Task, patch: TaskPatch, timezone: string): Task {
+/** Predicts what the database will store (see tasks_before_write). */
+function applyPatch(task: Task, patch: TaskPatch, timezone: string, today: ISODate): Task {
   const next: Task = { ...task, ...patch } as Task;
   if ('due_date' in patch || 'due_time' in patch) next.timezone = timezone;
   if (!next.due_date) {
     next.due_time = null;
     next.reminder_offset_minutes = null;
+    next.recurrence = null;
+  } else if (next.recurrence && task.status === 'pending' && next.status === 'completed') {
+    next.status = 'pending';
+    next.due_date = nextOccurrence(next.recurrence, next.due_date, today);
   }
   next.due_at = computeDueAt(next.due_date, next.due_time, next.timezone);
-  if (patch.status && patch.status !== task.status) {
-    next.completed_at = patch.status === 'completed' ? new Date().toISOString() : null;
+  if (next.status !== task.status) {
+    next.completed_at = next.status === 'completed' ? new Date().toISOString() : null;
   }
   return next;
 }
@@ -163,7 +169,7 @@ function scheduleRefresh() {
 // ---------------------------------------------------------------------------
 
 export function useTaskActions() {
-  const { timezone } = usePreferences();
+  const { timezone, today } = usePreferences();
   const { toast } = useToast();
 
   const create = useCallback(
@@ -184,7 +190,7 @@ export function useTaskActions() {
 
   const update = useCallback(
     async (task: Task, patch: TaskPatch, opts: { silent?: boolean; message?: string } = {}) => {
-      const optimistic = applyPatch(task, patch, timezone);
+      const optimistic = applyPatch(task, patch, timezone, today);
       patchTaskInCache(optimistic);
       try {
         const saved = await api.tasks.update(task.id, patch, timezone);
@@ -198,17 +204,61 @@ export function useTaskActions() {
         throw e;
       }
     },
-    [timezone, toast],
+    [timezone, today, toast],
+  );
+
+  /** Moves a task to another day, with undo. */
+  const postpone = useCallback(
+    async (task: Task, date: ISODate) => {
+      if (!task.due_date || task.due_date === date) return;
+      const from = task.due_date;
+      try {
+        const saved = await update(task, { due_date: date }, { silent: true });
+        toast({
+          message: `Adiada para ${relativeDayLabel(date, today).toLowerCase()}`,
+          description: task.title,
+          action: { label: 'Desfazer', onClick: () => void update(saved, { due_date: from }, { silent: true }) },
+        });
+      } catch {
+        // update() already showed the error.
+      }
+    },
+    [update, toast, today],
+  );
+
+  /** Moves several tasks to one day in a single request. */
+  const moveAll = useCallback(
+    async (tasks: Task[], date: ISODate) => {
+      if (tasks.length === 0) return;
+      tasks.forEach((t) => patchTaskInCache(applyPatch(t, { due_date: date }, timezone, today)));
+      try {
+        await api.tasks.reschedule(tasks.map((t) => t.id), date, timezone);
+        toast({ message: tasks.length === 1 ? 'Tarefa movida' : `${tasks.length} tarefas movidas` });
+      } catch (e) {
+        toast({ message: errorMessage(e, 'Não foi possível mover as tarefas.'), tone: 'error' });
+      } finally {
+        scheduleRefresh(); // also restores the cache after an error
+      }
+    },
+    [timezone, today, toast],
   );
 
   const setStatus = useCallback(
     async (task: Task, status: TaskStatus) => {
+      let saved: Task;
       try {
-        await update(task, { status }, { silent: true });
+        saved = await update(task, { status }, { silent: true });
       } catch {
         return;
       }
-      if (status === 'completed') {
+      if (status === 'completed' && saved.status === 'pending' && saved.due_date) {
+        // Repeating task: it moved to its next date instead of closing.
+        toast({
+          message: `Feita! Próxima: ${relativeDayLabel(saved.due_date, today).toLowerCase()}`,
+          description: task.title,
+          action: { label: 'Desfazer', onClick: () => void update(saved, { due_date: task.due_date }, { silent: true }) },
+        });
+      } else if (status === 'completed') {
         toast({
           message: 'Tarefa concluída',
           description: task.title,
@@ -218,7 +268,7 @@ export function useTaskActions() {
         toast({ message: 'Tarefa reaberta', description: task.title });
       }
     },
-    [update, toast],
+    [update, toast, today],
   );
 
   const remove = useCallback(
@@ -238,5 +288,5 @@ export function useTaskActions() {
     [toast],
   );
 
-  return { create, update, setStatus, remove };
+  return { create, update, setStatus, postpone, moveAll, remove };
 }

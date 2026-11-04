@@ -21,6 +21,8 @@ Gerenciador de tarefas pessoal em produção. Filosofia: poucas funcionalidades,
 - RLS em todas as tabelas; nada para `anon`. Validações importantes também como `CHECK` no banco.
 - `tasks.due_at` e os lembretes são derivados por trigger a partir de `due_date` + `due_time` + `timezone`. Não calcule isso só no front.
 - Lembretes: trigger cria/atualiza `notifications` (`pending`); pg_cron chama `dispatch_due_notifications()` a cada minuto (idempotente); Realtime avisa abas abertas; a Edge Function envia Web Push.
+- Tarefas recorrentes (`tasks.recurrence`): concluir uma tarefa que repete não a fecha; o trigger `tasks_before_write` a move para a próxima data (`next_occurrence`, espelhada em `src/utils/recurrence.ts`). Ela não aparece em Concluídas.
+- Botões "Concluir" e "Adiar 1h" na notificação: o push leva um token assinado (`functions/_shared/actionToken.ts`) e o service worker chama a Edge Function `reminder-action` (sem JWT, o token é a autenticação). Notificação mostrada por uma aba aberta devolve a ação para a aba. Adiar usa a RPC `snooze_reminder`.
 - Depois de alterar o schema, regenere `src/types/database.ts` e rode os advisors de segurança do Supabase.
 
 ## Antes de dar algo por pronto

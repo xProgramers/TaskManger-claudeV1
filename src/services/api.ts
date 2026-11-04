@@ -57,6 +57,8 @@ export interface TasksApi {
   countPendingBetween(from: ISODate, to: ISODate): Promise<number>;
   create(input: TaskInput, timezone: string): Promise<Task>;
   update(id: string, patch: TaskPatch, timezone: string): Promise<Task>;
+  /** Moves several tasks to `date` in one request (time and reminder stay). */
+  reschedule(ids: string[], date: ISODate, timezone: string): Promise<Task[]>;
   remove(id: string): Promise<void>;
 }
 
@@ -71,6 +73,8 @@ export interface NotificationsApi {
   list(limit?: number): Promise<AppNotification[]>;
   markRead(ids?: string[]): Promise<void>;
   remove(id: string): Promise<void>;
+  /** Reminds again about the reminder's task in `minutes`. */
+  snooze(id: string, minutes: number): Promise<void>;
   /** Called when a reminder is delivered (Realtime). Returns an unsubscribe fn. */
   subscribe(userId: string, onDelivered: (n: AppNotification) => void): () => void;
 }

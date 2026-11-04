@@ -9,19 +9,20 @@ import {
   relativeDayLabel,
   zonedToInstant,
 } from '@/utils/dates';
+import { recurrenceLabel } from '@/utils/recurrence';
 import { isOverdue } from '@/utils/task';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { useTaskUI } from '@/contexts/TaskUIContext';
 import { useCategories } from '@/hooks/useCategories';
 import { useTask, useTaskActions } from '@/hooks/useTasks';
-import { CheckIcon, ClockIcon, PencilIcon, ReopenIcon, TrashIcon } from './icons';
+import { CheckIcon, ClockIcon, PencilIcon, ReopenIcon, SnoozeIcon, TrashIcon } from './icons';
 import { CategoryBadge, PriorityBadge } from './Badges';
-import { Sheet } from './ui/Layer';
+import { Menu, MenuItem, Sheet } from './ui/Layer';
 import { Button } from './ui/Button';
 import { Skeleton } from './ui/Spinner';
 import { ConfirmDialog } from './ConfirmDialog';
 import { TaskForm } from './TaskForm';
-import { TaskCheckbox } from './TaskItem';
+import { postponeDates, TaskCheckbox } from './TaskItem';
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -79,6 +80,7 @@ function EditTask({ task, onDone }: { task: Task; onDone: () => void }) {
         priority: task.priority,
         category_id: task.category_id,
         reminder_offset_minutes: task.reminder_offset_minutes,
+        recurrence: task.recurrence,
       }}
       onSubmit={async (input) => {
         await update(task, input, { message: 'Alterações salvas' });
@@ -92,7 +94,7 @@ function EditTask({ task, onDone }: { task: Task; onDone: () => void }) {
 function ViewTask({ task, onEdit, onDeleted }: { task: Task; onEdit: () => void; onDeleted: () => void }) {
   const { today, timezone, timeFormat } = usePreferences();
   const { byId } = useCategories();
-  const { setStatus, remove } = useTaskActions();
+  const { setStatus, postpone, remove } = useTaskActions();
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -157,6 +159,7 @@ function ViewTask({ task, onEdit, onDeleted }: { task: Task; onEdit: () => void;
           <Row label="Horário">
             {task.due_time ? <span className="tnum">{formatTime(task.due_time, timeFormat)}</span> : <Muted>Sem horário</Muted>}
           </Row>
+          {task.recurrence && <Row label="Repete">{recurrenceLabel(task.recurrence, task.due_date)}</Row>}
           <Row label="Prioridade">
             <PriorityBadge priority={task.priority} showLabel className="text-ink" />
           </Row>
@@ -198,13 +201,36 @@ function ViewTask({ task, onEdit, onDeleted }: { task: Task; onEdit: () => void;
         <Button leading={<PencilIcon size={15} />} onClick={onEdit}>
           Editar
         </Button>
+        {!done && task.due_date && (
+          <Menu
+            label="Adiar para"
+            align="start"
+            trigger={(t) => (
+              <Button
+                ref={t.ref}
+                onClick={t.onClick}
+                aria-haspopup={t['aria-haspopup']}
+                aria-expanded={t['aria-expanded']}
+                leading={<SnoozeIcon size={15} />}
+              >
+                Adiar
+              </Button>
+            )}
+          >
+            {postponeDates(task.due_date, today).map((o) => (
+              <MenuItem key={o.label} onSelect={() => void postpone(task, o.date)}>
+                {o.label}
+              </MenuItem>
+            ))}
+          </Menu>
+        )}
         <Button
           variant="ghost"
           className="ml-auto text-danger hover:bg-danger-soft hover:text-danger"
           leading={<TrashIcon size={15} />}
           onClick={() => setConfirming(true)}
         >
-          Excluir
+          <span className="max-sm:sr-only">Excluir</span>
         </Button>
       </div>
 

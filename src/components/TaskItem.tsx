@@ -1,9 +1,11 @@
 import { memo, useState, type CSSProperties, type ReactNode } from 'react';
-import type { Category, Task } from '@/types';
+import type { Category, ISODate, Task } from '@/types';
 import { cn } from '@/utils/cn';
-import { formatTime, relativeDayLabel } from '@/utils/dates';
+import { addDays, formatTime, relativeDayLabel, startOfWeek } from '@/utils/dates';
+import { recurrenceLabel } from '@/utils/recurrence';
 import { isOverdue } from '@/utils/task';
-import { BellIcon, CheckIcon, ClockIcon, ReopenIcon, TextIcon } from '@/components/icons';
+import { BellIcon, CheckIcon, ClockIcon, RepeatIcon, ReopenIcon, SnoozeIcon, TextIcon } from '@/components/icons';
+import { Menu, MenuItem } from '@/components/ui/Layer';
 import { CategoryBadge, PriorityBadge } from '@/components/Badges';
 import type { TimeFormat } from '@/types';
 
@@ -63,6 +65,8 @@ export interface TaskItemProps {
   when?: 'time' | 'date' | 'none';
   onToggle: (task: Task) => void;
   onOpen: (task: Task) => void;
+  /** Shows the "Adiar" menu on pending tasks with a date. */
+  onPostpone?: (task: Task, date: ISODate) => void;
   /** Extra trailing content (e.g. a "Reabrir" button on the completed screen). */
   trailing?: ReactNode;
   leaving?: boolean;
@@ -70,7 +74,7 @@ export interface TaskItemProps {
   highlight?: boolean;
 }
 
-function TaskItemBase({ task, category, today, timeFormat, when = 'time', onToggle, onOpen, trailing, leaving, highlight }: TaskItemProps) {
+function TaskItemBase({ task, category, today, timeFormat, when = 'time', onToggle, onOpen, onPostpone, trailing, leaving, highlight }: TaskItemProps) {
   const done = task.status === 'completed';
   const overdue = isOverdue(task);
   const time = task.due_time ? formatTime(task.due_time, timeFormat) : null;
@@ -136,7 +140,7 @@ function TaskItemBase({ task, category, today, timeFormat, when = 'time', onTogg
               >
                 {task.title}
               </span>
-              {(category || overdue || task.description || task.reminder_offset_minutes !== null) && (
+              {(category || overdue || task.description || task.reminder_offset_minutes !== null || task.recurrence) && (
                 <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-3">
                   {overdue && (
                     <span className="inline-flex items-center gap-1 font-medium text-late">
@@ -151,6 +155,12 @@ function TaskItemBase({ task, category, today, timeFormat, when = 'time', onTogg
                       <span className="sr-only">Tem descrição</span>
                     </span>
                   )}
+                  {task.recurrence && !done && (
+                    <span className="inline-flex items-center" title={recurrenceLabel(task.recurrence, task.due_date)}>
+                      <RepeatIcon size={13} />
+                      <span className="sr-only">Repete: {recurrenceLabel(task.recurrence, task.due_date)}</span>
+                    </span>
+                  )}
                   {task.reminder_offset_minutes !== null && !done && (
                     <span className="inline-flex items-center" title="Lembrete ativo">
                       <BellIcon size={13} />
@@ -163,6 +173,9 @@ function TaskItemBase({ task, category, today, timeFormat, when = 'time', onTogg
 
             <PriorityBadge priority={task.priority} className={cn('pt-1', done && 'opacity-50')} />
           </button>
+          {onPostpone && !done && task.due_date && (
+            <PostponeMenu task={task} today={today} onPick={(d) => onPostpone(task, d)} />
+          )}
           {trailing}
         </div>
       </div>
@@ -171,6 +184,44 @@ function TaskItemBase({ task, category, today, timeFormat, when = 'time', onTogg
 }
 
 export const TaskItem = memo(TaskItemBase);
+
+/** Quick dates to move a task to, skipping the day it is already on. */
+export function postponeDates(due: ISODate, today: ISODate): { label: string; date: ISODate }[] {
+  const options = [
+    { label: 'Hoje', date: today },
+    { label: 'Amanhã', date: addDays(today, 1) },
+    { label: 'Próxima segunda', date: addDays(startOfWeek(today, 1), 7) },
+  ];
+  return options.filter((o) => o.date !== due && (o.date !== today || due < today));
+}
+
+export function PostponeMenu({ task, today, onPick }: { task: Task; today: ISODate; onPick: (date: ISODate) => void }) {
+  return (
+    <Menu
+      label="Adiar para"
+      trigger={(t) => (
+        <button
+          ref={t.ref}
+          type="button"
+          onClick={t.onClick}
+          aria-haspopup={t['aria-haspopup']}
+          aria-expanded={t['aria-expanded']}
+          aria-label={`Adiar: ${task.title}`}
+          title="Adiar"
+          className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-xs text-ink-3 hover:bg-surface hover:text-ink aria-expanded:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+        >
+          <SnoozeIcon size={15} />
+        </button>
+      )}
+    >
+      {postponeDates(task.due_date!, today).map((o) => (
+        <MenuItem key={o.label} onSelect={() => onPick(o.date)}>
+          {o.label}
+        </MenuItem>
+      ))}
+    </Menu>
+  );
+}
 
 export function ReopenButton({ onClick, title }: { onClick: () => void; title: string }) {
   return (

@@ -69,3 +69,40 @@ test('dismissed token kinds stay in the title', () => {
   assert.equal(r.title, 'Assistir Amanhã Nunca Morre');
   assert.equal(r.date, null);
 });
+
+test('repeating tasks', () => {
+  const daily = parseQuickAdd('Tomar remédio todo dia às 20h', ctx);
+  assert.equal(daily.title, 'Tomar remédio');
+  assert.equal(daily.recurrence, 'daily');
+  assert.equal(daily.date, '2026-10-02');
+  assert.equal(daily.time, '20:00');
+
+  // 8h already passed today: the series starts tomorrow.
+  assert.equal(parseQuickAdd('Caminhar todos os dias 8h', ctx).date, '2026-10-03');
+
+  const monday = parseQuickAdd('Reunião de equipe toda segunda-feira', ctx);
+  assert.equal(monday.title, 'Reunião de equipe');
+  assert.equal(monday.recurrence, 'weekly');
+  assert.equal(monday.date, '2026-10-05');
+  assert.equal(parseQuickAdd('Feira todos os sábados', ctx).date, '2026-10-03');
+  assert.equal(parseQuickAdd('Relatório toda sexta', ctx).date, '2026-10-02'); // today is Friday
+
+  const rent = parseQuickAdd('Pagar aluguel todo dia 5', ctx);
+  assert.equal(rent.title, 'Pagar aluguel');
+  assert.equal(rent.recurrence, 'monthly');
+  assert.equal(rent.date, '2026-10-05');
+  assert.equal(parseQuickAdd('Fatura todo dia 1', ctx).date, '2026-11-01');
+
+  const work = parseQuickAdd('Checar e-mails dias úteis', ctx);
+  assert.equal(work.recurrence, 'weekdays');
+  assert.equal(work.date, '2026-10-02');
+
+  assert.equal(parseQuickAdd('Backup toda semana', ctx).recurrence, 'weekly');
+  assert.equal(parseQuickAdd('Revisar metas todo mês', ctx).recurrence, 'monthly');
+  assert.equal(parseQuickAdd('Renovar seguro todo ano 15/03', ctx).date, '2027-03-15');
+  assert.equal(parseQuickAdd('Ligar para a Ana', ctx).recurrence, null);
+
+  const ignored = parseQuickAdd('Pagar aluguel todo dia 5', { ...ctx, ignore: ['repeat'] });
+  assert.equal(ignored.recurrence, null);
+  assert.equal(ignored.date, '2026-10-05'); // "dia 5" is still a date
+});

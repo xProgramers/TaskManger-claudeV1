@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
-import type { ISODate, ISOTime, ReminderOffset, TaskInput, TaskPriority } from '@/types';
+import type { ISODate, ISOTime, Recurrence, ReminderOffset, TaskInput, TaskPriority } from '@/types';
 import { cn } from '@/utils/cn';
 import { formatDayMonthShort, formatTime, nowTimeIn, normalizeTime, relativeDayLabel } from '@/utils/dates';
 import { parseQuickAdd, type QuickTokenKind } from '@/utils/quickAdd';
+import { recurrenceLabel } from '@/utils/recurrence';
 import { PRIORITY_LABEL } from '@/utils/task';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { useTaskUI } from '@/contexts/TaskUIContext';
@@ -10,7 +11,7 @@ import { useCategories } from '@/hooks/useCategories';
 import { Button } from '@/components/ui/Button';
 import { Kbd } from '@/components/ui/Form';
 import { EnterIcon, XIcon } from '@/components/icons';
-import { CategoryChip, DateChip, PriorityChip, ReminderChip, TimeChip } from './TaskFields';
+import { CategoryChip, DateChip, PriorityChip, ReminderChip, RepeatChip, TimeChip } from './TaskFields';
 
 export interface TaskFormValues {
   title: string;
@@ -20,6 +21,7 @@ export interface TaskFormValues {
   priority: TaskPriority;
   category_id: string | null;
   reminder_offset_minutes: ReminderOffset | null;
+  recurrence: Recurrence | null;
 }
 
 interface TaskFormProps {
@@ -34,6 +36,7 @@ interface TaskFormProps {
 }
 
 const TOKEN_LABEL: Record<QuickTokenKind, string> = {
+  repeat: 'repetição',
   date: 'data',
   time: 'horário',
   priority: 'prioridade',
@@ -68,6 +71,7 @@ export function TaskForm({ initial, submitLabel, onSubmit, onCancel, naturalLang
     priority: parsed?.priority ?? v.priority,
     category_id: parsed?.categoryId ?? v.category_id,
   };
+  const recurrence = effective.due_date ? (parsed?.recurrence ?? v.recurrence) : null;
   const defaultReminder = (prefs?.default_reminder_minutes ?? null) as ReminderOffset | null;
   const reminder: ReminderOffset | null = !effective.due_date
     ? null
@@ -105,6 +109,7 @@ export function TaskForm({ initial, submitLabel, onSubmit, onCancel, naturalLang
         priority: effective.priority,
         category_id: effective.category_id,
         reminder_offset_minutes: reminder,
+        recurrence,
       });
     } catch {
       // The toast already explained; keep the form open with the user's input.
@@ -129,6 +134,8 @@ export function TaskForm({ initial, submitLabel, onSubmit, onCancel, naturalLang
 
   const tokenText = (kind: QuickTokenKind): string => {
     switch (kind) {
+      case 'repeat':
+        return recurrence ? recurrenceLabel(recurrence, effective.due_date) : '';
       case 'date':
         return parsed?.date ? `${relativeDayLabel(parsed.date, today)}, ${formatDayMonthShort(parsed.date)}` : '';
       case 'time':
@@ -221,6 +228,11 @@ export function TaskForm({ initial, submitLabel, onSubmit, onCancel, naturalLang
           format={timeFormat}
           disabled={!effective.due_date}
           onChange={(t) => setManual('due_time', t, 'time')}
+        />
+        <RepeatChip
+          value={recurrence}
+          date={effective.due_date}
+          onChange={(r) => setManual('recurrence', r, 'repeat')}
         />
         <PriorityChip value={effective.priority} onChange={(p) => setManual('priority', p, 'priority')} />
         <CategoryChip

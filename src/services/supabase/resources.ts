@@ -55,6 +55,10 @@ export const supabaseNotifications: NotificationsApi = {
     const { error } = await getSupabase().from('notifications').delete().eq('id', id);
     if (error) throw toAppError(error, 'Não foi possível remover a notificação.');
   },
+  async snooze(id, minutes) {
+    const { error } = await getSupabase().rpc('snooze_reminder', { p_notification_id: id, p_minutes: minutes });
+    if (error) throw toAppError(error, 'Não foi possível adiar o lembrete.');
+  },
   subscribe(userId, onDelivered) {
     const supabase = getSupabase();
     const channel = supabase

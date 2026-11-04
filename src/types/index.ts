@@ -9,6 +9,10 @@ export type ThemePreference = 'light' | 'dark' | 'system';
 export type TimeFormat = '24h' | '12h';
 export type NotificationStatus = 'pending' | 'sent' | 'read';
 
+/** How a task repeats. Mirrors a DB check constraint. */
+export const RECURRENCES = ['daily', 'weekdays', 'weekly', 'monthly', 'yearly'] as const;
+export type Recurrence = (typeof RECURRENCES)[number];
+
 /** Allowed reminder offsets, in minutes before the task. Mirrors a DB check constraint. */
 export const REMINDER_OFFSETS = [0, 5, 15, 30, 60, 1440] as const;
 export type ReminderOffset = (typeof REMINDER_OFFSETS)[number];
@@ -32,6 +36,8 @@ export interface Task {
   /** Absolute deadline, derived by the database. */
   due_at: string | null;
   reminder_offset_minutes: ReminderOffset | null;
+  /** Completing a repeating task moves it to its next date instead. */
+  recurrence: Recurrence | null;
   category_id: string | null;
   completed_at: string | null;
   created_at: string;
@@ -45,6 +51,7 @@ export interface TaskInput {
   due_date?: ISODate | null;
   due_time?: ISOTime | null;
   reminder_offset_minutes?: ReminderOffset | null;
+  recurrence?: Recurrence | null;
   category_id?: string | null;
 }
 

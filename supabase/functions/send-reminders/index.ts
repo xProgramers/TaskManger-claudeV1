@@ -17,6 +17,7 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2.49.4';
 import { sendWebPush, type VapidKeys } from './webpush.ts';
+import { actionToken, timingSafeEqual } from '../_shared/actionToken.ts';
 
 interface DispatchConfig {
   reminders_dispatch_secret?: string;
@@ -46,13 +47,6 @@ const MAX_IDS = 500;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
-}
-
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
 }
 
 Deno.serve(async (req) => {
@@ -118,6 +112,16 @@ Deno.serve(async (req) => {
     subject: cfg.vapid_subject || Deno.env.get('SUPABASE_URL')!,
   };
 
+  // Lets the notification's "Concluir" / "Adiar 1h" buttons work with no tab open.
+  const actionUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/reminder-action`;
+  const tokens = new Map(
+    await Promise.all(
+      (notifications as NotificationRow[])
+        .filter((n) => n.task_id)
+        .map(async (n) => [n.id, await actionToken(cfg.reminders_dispatch_secret!, n.id)] as const),
+    ),
+  );
+
   const goneIds = new Set<string>();
   const usedIds = new Set<string>();
   let delivered = 0;
@@ -135,6 +139,7 @@ Deno.serve(async (req) => {
               body: n.message,
               taskId: n.task_id,
               url: n.task_id ? `/?task=${n.task_id}` : '/',
+              ...(tokens.has(n.id) && { actionUrl, token: tokens.get(n.id) }),
             },
             vapid,
             { topic: n.id.replace(/-/g, '') },

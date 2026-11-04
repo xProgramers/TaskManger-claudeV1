@@ -4,7 +4,7 @@ import { compareWithinDay, groupByDate, summarizeDay } from '@/utils/task';
 import { Link } from '@/lib/router';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { useTaskUI } from '@/contexts/TaskUIContext';
-import { usePendingCount, useOverdueTasks, useRangeTasks, useTaskCount } from '@/hooks/useTasks';
+import { usePendingCount, useOverdueTasks, useRangeTasks, useTaskActions, useTaskCount } from '@/hooks/useTasks';
 import { TaskList } from '@/components/TaskList';
 import { QuickAdd } from '@/components/QuickAdd';
 import { NotificationPrompt } from '@/components/NotificationPrompt';
@@ -32,6 +32,7 @@ export function TodayPage() {
   const overdue = useOverdueTasks();
   const count = useTaskCount();
   const upcomingCount = usePendingCount(addDays(today, 1), horizonEnd);
+  const { moveAll } = useTaskActions();
   const [showDone, setShowDone] = useState(false);
 
   const byDay = useMemo(() => groupByDate(range.data ?? []), [range.data]);
@@ -75,7 +76,20 @@ export function TodayPage() {
       </div>
 
       {overdueEarlier.length > 0 && (
-        <Section title="Atrasadas" count={overdueEarlier.length} tone="late">
+        <Section
+          title="Atrasadas"
+          count={overdueEarlier.length}
+          tone="late"
+          action={
+            <button
+              type="button"
+              onClick={() => void moveAll(overdueEarlier, today)}
+              className="text-sm font-medium text-accent hover:underline"
+            >
+              Mover todas para hoje
+            </button>
+          }
+        >
           <TaskList tasks={overdueEarlier} hideCompleted when="date" label="Tarefas atrasadas" />
         </Section>
       )}

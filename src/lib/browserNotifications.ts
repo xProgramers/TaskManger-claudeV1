@@ -85,12 +85,20 @@ export async function disablePushOnThisDevice(push: PushApi) {
 
 /**
  * Shows a system notification from the page. Uses the service worker when
- * available so the same `tag` as a push de-duplicates them.
+ * available so the same `tag` as a push de-duplicates them, and so the
+ * "Concluir" / "Adiar 1h" buttons work (the worker hands them back to this tab).
  */
-export async function showSystemNotification(id: string, title: string, body: string, url: string) {
+export async function showSystemNotification(id: string, title: string, body: string, taskId: string | null) {
   if (currentPermission() !== 'granted') return;
-  const options: NotificationOptions = { body, tag: id, icon: '/favicon.svg', data: { url, id } };
+  const url = taskId ? `/?task=${taskId}` : '/';
+  const options: NotificationOptions = { body, tag: id, icon: '/favicon.svg', data: { url, id, taskId } };
   const reg = await registerServiceWorker();
-  if (reg) await reg.showNotification(title, options);
-  else new Notification(title, options);
+  if (!reg) return void new Notification(title, options);
+  const actions = taskId
+    ? [
+        { action: 'complete', title: 'Concluir' },
+        { action: 'snooze', title: 'Adiar 1h' },
+      ]
+    : [];
+  await reg.showNotification(title, { ...options, actions } as NotificationOptions);
 }
