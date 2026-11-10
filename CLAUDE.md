@@ -4,7 +4,7 @@ Gerenciador de tarefas pessoal em produção. Filosofia: poucas funcionalidades,
 
 ## Onde as coisas vivem
 - **Código**: este repositório (`main` = produção).
-- **Site**: https://taskmanger-claudev1.mpotal.workers.dev — o Cloudflare Workers (Workers Builds) publica automaticamente cada push no `main`. Config em `wrangler.jsonc` e `public/_headers`; as variáveis `VITE_*` são build variables no painel do Cloudflare. A Vercel (task-manger-claude-v1.vercel.app) foi o host anterior.
+- **Site**: https://taskmanger-claudev1.mpotal.workers.dev — o Cloudflare Workers (Workers Builds) publica automaticamente cada push no `main`. Config em `wrangler.jsonc` e `public/_headers`; as variáveis `VITE_*` são build variables no painel do Cloudflare. Se um push no `main` não aparecer em Deployments, a ligação com o GitHub caiu: reconecte em Settings → Build do worker e faça um novo push. A Vercel (task-manger-claude-v1.vercel.app) foi o host anterior.
 - **Backend**: Supabase, projeto `tarefas-app` (ref `yiishlvvnklntrrbrdyt`, região São Paulo). Auth, Postgres com RLS, Realtime, pg_cron e a Edge Function `send-reminders`.
 - Segredos (chaves VAPID, segredo do dispatcher) ficam no Supabase Vault, nunca no repositório.
 
