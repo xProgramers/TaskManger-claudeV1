@@ -4,7 +4,7 @@ import { cn } from '@/utils/cn';
 import { addDays, formatTime, relativeDayLabel, startOfWeek } from '@/utils/dates';
 import { recurrenceLabel } from '@/utils/recurrence';
 import { isOverdue } from '@/utils/task';
-import { BellIcon, CheckIcon, ClockIcon, RepeatIcon, ReopenIcon, SnoozeIcon, TextIcon } from '@/components/icons';
+import { BellIcon, ChecklistIcon, CheckIcon, ClockIcon, RepeatIcon, ReopenIcon, SnoozeIcon, TextIcon } from '@/components/icons';
 import { Menu, MenuItem } from '@/components/ui/Layer';
 import { CategoryBadge, PriorityBadge } from '@/components/Badges';
 import type { TimeFormat } from '@/types';
@@ -140,7 +140,7 @@ function TaskItemBase({ task, category, today, timeFormat, when = 'time', onTogg
               >
                 {task.title}
               </span>
-              {(category || overdue || task.description || task.reminder_offset_minutes !== null || task.recurrence) && (
+              {(category || overdue || task.description || task.checklist.length > 0 || task.reminder_offset_minutes !== null || task.recurrence) && (
                 <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-3">
                   {overdue && (
                     <span className="inline-flex items-center gap-1 font-medium text-late">
@@ -149,6 +149,12 @@ function TaskItemBase({ task, category, today, timeFormat, when = 'time', onTogg
                     </span>
                   )}
                   {category && <CategoryBadge category={category} className={done ? 'text-ink-3' : undefined} />}
+                  {task.checklist.length > 0 && (
+                    <span className="tnum inline-flex items-center gap-1" title="Checklist">
+                      <ChecklistIcon size={13} />
+                      {task.checklist.filter((i) => i.done).length}/{task.checklist.length}
+                    </span>
+                  )}
                   {task.description && (
                     <span className="inline-flex items-center" title="Tem descrição">
                       <TextIcon size={13} />

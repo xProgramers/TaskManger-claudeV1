@@ -42,6 +42,16 @@ export interface Task {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  /** Itens do checklist (até 50). */
+  checklist: ChecklistItem[];
+  /** Pendente e já começada (coluna "Fazendo" do Kanban). Volta a false ao concluir. */
+  doing: boolean;
+}
+
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
 }
 
 export interface TaskInput {
@@ -53,9 +63,10 @@ export interface TaskInput {
   reminder_offset_minutes?: ReminderOffset | null;
   recurrence?: Recurrence | null;
   category_id?: string | null;
+  checklist?: ChecklistItem[];
 }
 
-export type TaskPatch = Partial<TaskInput> & { status?: TaskStatus };
+export type TaskPatch = Partial<TaskInput> & { status?: TaskStatus; doing?: boolean };
 
 export interface Category {
   id: string;

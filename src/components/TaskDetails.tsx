@@ -22,6 +22,7 @@ import { Button } from './ui/Button';
 import { Skeleton } from './ui/Spinner';
 import { ConfirmDialog } from './ConfirmDialog';
 import { TaskForm } from './TaskForm';
+import { Checklist } from './Checklist';
 import { postponeDates, TaskCheckbox } from './TaskItem';
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
@@ -81,6 +82,7 @@ function EditTask({ task, onDone }: { task: Task; onDone: () => void }) {
         category_id: task.category_id,
         reminder_offset_minutes: task.reminder_offset_minutes,
         recurrence: task.recurrence,
+        checklist: task.checklist,
       }}
       onSubmit={async (input) => {
         await update(task, input, { message: 'Alterações salvas' });
@@ -94,7 +96,7 @@ function EditTask({ task, onDone }: { task: Task; onDone: () => void }) {
 function ViewTask({ task, onEdit, onDeleted }: { task: Task; onEdit: () => void; onDeleted: () => void }) {
   const { today, timezone, timeFormat } = usePreferences();
   const { byId } = useCategories();
-  const { setStatus, postpone, remove } = useTaskActions();
+  const { setStatus, postpone, remove, update } = useTaskActions();
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -132,6 +134,16 @@ function ViewTask({ task, onEdit, onDeleted }: { task: Task; onEdit: () => void;
         <div className="mt-4 text-base leading-6 whitespace-pre-wrap text-ink-2">
           {task.description ?? <Muted>Sem descrição</Muted>}
         </div>
+
+        {task.checklist.length > 0 && (
+          <div className="mt-6">
+            <Checklist
+              readOnlyText
+              items={task.checklist}
+              onChange={(checklist) => void update(task, { checklist }, { silent: true })}
+            />
+          </div>
+        )}
 
         <dl className="mt-6 divide-y divide-line border-t border-b border-line">
           <Row label="Status">
