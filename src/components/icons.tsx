@@ -191,3 +191,18 @@ export const GripIcon = make(
     <circle cx="15" cy="17" r="1.1" fill="currentColor" stroke="none" />
   </>,
 );
+export const KanbanIcon = make(
+  'KanbanIcon',
+  <>
+    <rect x="3.5" y="4" width="5" height="14" rx="1.5" />
+    <rect x="9.5" y="4" width="5" height="9" rx="1.5" />
+    <rect x="15.5" y="4" width="5" height="11.5" rx="1.5" />
+  </>,
+);
+export const ChecklistIcon = make(
+  'ChecklistIcon',
+  <>
+    <rect x="4" y="4" width="16" height="16" rx="3" />
+    <path d="m8.5 12 2.5 2.5 4.5-5" />
+  </>,
+);

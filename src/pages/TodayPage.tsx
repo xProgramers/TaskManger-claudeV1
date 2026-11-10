@@ -13,7 +13,47 @@ import { EmptyState, ErrorState } from '@/components/EmptyState';
 import { TaskListSkeleton } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 import { Kbd } from '@/components/ui/Form';
-import { ChevronDownIcon, ChevronRightIcon, LogoMark, PlusIcon, SunIcon } from '@/components/icons';
+import { ChevronDownIcon, ChevronRightIcon, KanbanIcon, ListIcon, LogoMark, PlusIcon, SunIcon } from '@/components/icons';
+import { TaskBoard } from '@/components/TaskBoard';
+import { cn } from '@/utils/cn';
+
+type View = 'list' | 'kanban';
+const VIEW_KEY = 'prumo:today-view';
+const readView = (): View => {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'kanban' ? 'kanban' : 'list';
+  } catch {
+    return 'list';
+  }
+};
+
+/** Alterna entre lista e Kanban; a escolha fica salva no aparelho. */
+function ViewToggle({ value, onChange }: { value: View; onChange: (v: View) => void }) {
+  const opts = [
+    { id: 'list' as const, label: 'Lista', icon: <ListIcon size={14} /> },
+    { id: 'kanban' as const, label: 'Kanban', icon: <KanbanIcon size={14} /> },
+  ];
+  return (
+    <div role="radiogroup" aria-label="Visualização" className="inline-flex rounded-sm border border-line bg-sunken p-0.5">
+      {opts.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          role="radio"
+          aria-checked={value === o.id}
+          onClick={() => onChange(o.id)}
+          className={cn(
+            'inline-flex h-7 items-center gap-1.5 rounded-xs px-2.5 text-sm font-medium transition-colors',
+            value === o.id ? 'bg-surface text-ink shadow-[0_1px_2px_rgb(0_0_0/0.08)]' : 'text-ink-3 hover:text-ink',
+          )}
+        >
+          {o.icon}
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function greeting(hour: number) {
   if (hour < 5) return 'Boa noite';
@@ -34,6 +74,15 @@ export function TodayPage() {
   const upcomingCount = usePendingCount(addDays(today, 1), horizonEnd);
   const { moveAll } = useTaskActions();
   const [showDone, setShowDone] = useState(false);
+  const [view, setViewState] = useState<View>(readView);
+  const setView = (v: View) => {
+    setViewState(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      /* sem armazenamento: vale só nesta visita */
+    }
+  };
 
   const byDay = useMemo(() => groupByDate(range.data ?? []), [range.data]);
   const todayTasks = byDay.get(today) ?? [];
@@ -52,7 +101,7 @@ export function TodayPage() {
   }
 
   return (
-    <div className="max-w-[960px]">
+    <div className={view === 'kanban' ? 'max-w-[1120px]' : 'max-w-[960px]'}>
       <header>
         <p className="text-base text-ink-2">
           {greeting(hour)}
@@ -75,72 +124,91 @@ export function TodayPage() {
         <NotificationPrompt />
       </div>
 
-      {overdueEarlier.length > 0 && (
+      {view === 'kanban' ? (
         <Section
-          title="Atrasadas"
-          count={overdueEarlier.length}
-          tone="late"
-          action={
-            <button
-              type="button"
-              onClick={() => void moveAll(overdueEarlier, today)}
-              className="text-sm font-medium text-accent hover:underline"
-            >
-              Mover todas para hoje
-            </button>
-          }
+          title="Hoje"
+          tone="accent"
+          icon={<SunIcon size={15} />}
+          count={range.data ? pendingToday.length + overdueEarlier.length : undefined}
+          action={<ViewToggle value={view} onChange={setView} />}
         >
-          <TaskList tasks={overdueEarlier} hideCompleted when="date" label="Tarefas atrasadas" />
+          {range.isLoading ? (
+            <TaskListSkeleton rows={4} />
+          ) : (
+            <TaskBoard pending={[...overdueEarlier, ...pendingToday]} done={doneToday} today={today} />
+          )}
         </Section>
-      )}
-
-      <Section
-        title="Hoje"
-        tone="accent"
-        icon={<SunIcon size={15} />}
-        count={range.data ? pendingToday.length : undefined}
-      >
-        <QuickAdd defaultDate={today} placeholder="Adicionar tarefa para hoje" />
-        {range.isError ? (
-          <ErrorState onRetry={() => void range.refetch()} />
-        ) : range.isLoading ? (
-          <TaskListSkeleton rows={4} />
-        ) : pendingToday.length === 0 ? (
-          <EmptyState
-            className="mt-2"
-            compact
-            title={doneToday.length ? 'Tudo feito por hoje.' : 'Tudo tranquilo por aqui.'}
-            description={
-              doneToday.length
-                ? `Você concluiu ${doneToday.length} ${doneToday.length === 1 ? 'tarefa' : 'tarefas'} hoje.`
-                : 'Você não possui tarefas para hoje.'
-            }
-            action={
-              <Button size="sm" leading={<PlusIcon size={14} />} onClick={() => openCreate({ due_date: today })}>
-                Criar tarefa
-              </Button>
-            }
-          />
-        ) : (
-          <TaskList tasks={pendingToday} hideCompleted highlight label="Tarefas de hoje" />
-        )}
-
-        {doneToday.length > 0 && (
-          <div className="mt-3">
-            <button
-              type="button"
-              onClick={() => setShowDone((s) => !s)}
-              aria-expanded={showDone}
-              className="flex h-8 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-ink-3 hover:bg-hover hover:text-ink"
+      ) : (
+        <>
+          {overdueEarlier.length > 0 && (
+            <Section
+              title="Atrasadas"
+              count={overdueEarlier.length}
+              tone="late"
+              action={
+                <button
+                  type="button"
+                  onClick={() => void moveAll(overdueEarlier, today)}
+                  className="text-sm font-medium text-accent hover:underline"
+                >
+                  Mover todas para hoje
+                </button>
+              }
             >
-              {showDone ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}
-              Concluídas hoje
-              <span className="tnum font-normal">{doneToday.length}</span>
-            </button>
-            {showDone && <TaskList tasks={doneToday} label="Concluídas hoje" />}
-          </div>
-        )}
-      </Section>
+              <TaskList tasks={overdueEarlier} hideCompleted when="date" label="Tarefas atrasadas" />
+            </Section>
+          )}
+
+          <Section
+            title="Hoje"
+            tone="accent"
+            icon={<SunIcon size={15} />}
+            count={range.data ? pendingToday.length : undefined}
+            action={<ViewToggle value={view} onChange={setView} />}
+          >
+            <QuickAdd defaultDate={today} placeholder="Adicionar tarefa para hoje" />
+            {range.isError ? (
+              <ErrorState onRetry={() => void range.refetch()} />
+            ) : range.isLoading ? (
+              <TaskListSkeleton rows={4} />
+            ) : pendingToday.length === 0 ? (
+              <EmptyState
+                className="mt-2"
+                compact
+                title={doneToday.length ? 'Tudo feito por hoje.' : 'Tudo tranquilo por aqui.'}
+                description={
+                  doneToday.length
+                    ? `Você concluiu ${doneToday.length} ${doneToday.length === 1 ? 'tarefa' : 'tarefas'} hoje.`
+                    : 'Você não possui tarefas para hoje.'
+                }
+                action={
+                  <Button size="sm" leading={<PlusIcon size={14} />} onClick={() => openCreate({ due_date: today })}>
+                    Criar tarefa
+                  </Button>
+                }
+              />
+            ) : (
+              <TaskList tasks={pendingToday} hideCompleted highlight label="Tarefas de hoje" />
+            )}
+
+            {doneToday.length > 0 && (
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDone((s) => !s)}
+                  aria-expanded={showDone}
+                  className="flex h-8 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-ink-3 hover:bg-hover hover:text-ink"
+                >
+                  {showDone ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}
+                  Concluídas hoje
+                  <span className="tnum font-normal">{doneToday.length}</span>
+                </button>
+                {showDone && <TaskList tasks={doneToday} label="Concluídas hoje" />}
+              </div>
+            )}
+          </Section>
+        </>
+      )}
 
       <Section
         title="A seguir"

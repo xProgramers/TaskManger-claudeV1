@@ -141,6 +141,8 @@ function removeTaskFromCache(id: string) {
 /** Predicts what the database will store (see tasks_before_write). */
 function applyPatch(task: Task, patch: TaskPatch, timezone: string, today: ISODate): Task {
   const next: Task = { ...task, ...patch } as Task;
+  // Mirrors tasks_before_write(): completing clears "Fazendo"; a repeat comes back unchecked.
+  if (task.status === 'pending' && next.status === 'completed') next.doing = false;
   if ('due_date' in patch || 'due_time' in patch) next.timezone = timezone;
   if (!next.due_date) {
     next.due_time = null;
@@ -149,6 +151,7 @@ function applyPatch(task: Task, patch: TaskPatch, timezone: string, today: ISODa
   } else if (next.recurrence && task.status === 'pending' && next.status === 'completed') {
     next.status = 'pending';
     next.due_date = nextOccurrence(next.recurrence, next.due_date, today);
+    next.checklist = next.checklist.map((i) => ({ ...i, done: false }));
   }
   next.due_at = computeDueAt(next.due_date, next.due_time, next.timezone);
   if (next.status !== task.status) {

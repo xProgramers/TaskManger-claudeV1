@@ -219,6 +219,8 @@ export type Database = {
       tasks: {
         Row: {
           category_id: string | null;
+          checklist: { id: string; text: string; done: boolean }[];
+          doing: boolean;
           completed_at: string | null;
           created_at: string;
           description: string | null;
@@ -237,6 +239,8 @@ export type Database = {
         };
         Insert: {
           category_id?: string | null;
+          checklist?: { id: string; text: string; done: boolean }[];
+          doing?: boolean;
           completed_at?: string | null;
           created_at?: string;
           description?: string | null;
@@ -255,6 +259,8 @@ export type Database = {
         };
         Update: {
           category_id?: string | null;
+          checklist?: { id: string; text: string; done: boolean }[];
+          doing?: boolean;
           completed_at?: string | null;
           created_at?: string;
           description?: string | null;

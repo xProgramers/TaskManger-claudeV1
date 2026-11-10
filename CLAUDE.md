@@ -23,6 +23,7 @@ Gerenciador de tarefas pessoal em produção. Filosofia: poucas funcionalidades,
 - Lembretes: trigger cria/atualiza `notifications` (`pending`); pg_cron chama `dispatch_due_notifications()` a cada minuto (idempotente); Realtime avisa abas abertas; a Edge Function envia Web Push.
 - Tarefas recorrentes (`tasks.recurrence`): concluir uma tarefa que repete não a fecha; o trigger `tasks_before_write` a move para a próxima data (`next_occurrence`, espelhada em `src/utils/recurrence.ts`). Ela não aparece em Concluídas.
 - Botões "Concluir" e "Adiar 1h" na notificação: o push leva um token assinado (`functions/_shared/actionToken.ts`) e o service worker chama a Edge Function `reminder-action` (sem JWT, o token é a autenticação). Notificação mostrada por uma aba aberta devolve a ação para a aba. Adiar usa a RPC `snooze_reminder`.
+- Checklist e Kanban: `tasks.checklist` (jsonb, lista `{id, text, done}`, até 50 itens) e `tasks.doing` (coluna "Fazendo"; o status continua `pending`). O trigger zera `doing` ao concluir e desmarca o checklist quando a tarefa repete; `applyPatch` em `useTasks.ts` e o mock espelham isso.
 - Depois de alterar o schema, regenere `src/types/database.ts` e rode os advisors de segurança do Supabase.
 
 ## Antes de dar algo por pronto
@@ -30,10 +31,13 @@ Gerenciador de tarefas pessoal em produção. Filosofia: poucas funcionalidades,
 2. Testar o fluxo na interface (dá para usar `npm run dev:demo` sem backend).
 3. Commit e push no `main`; acompanhar o deploy no Cloudflare.
 
+## Tela Hoje: Lista ou Kanban
+Chave Lista | Kanban na seção Hoje; a escolha fica no localStorage do aparelho (`prumo:today-view`). Kanban (`TaskBoard.tsx`): A fazer, Fazendo e Feito com as atrasadas, as de hoje e as concluídas hoje. Arrastar usa o drag and drop nativo (sem biblioteca).
+
 ## Quadro (notas adesivas)
 Tela `/quadro`: quadro infinito com pan (arrastar o fundo, roda do mouse) e zoom 25–200% (Ctrl+roda, pinça, botões, teclas + - 0 F). Posição das notas em pixels do "mundo" a 100% (`notes.pos_x/pos_y`, expostas no app como `x/y`; as colunas antigas `x/y` são legado). `z` é a ordem de empilhamento; `w`/`h` o tamanho em pixels (null = padrão). A visão (pan/zoom) fica no localStorage de cada aparelho. No celular vira grade. Sem setas, formas ou desenhos.
 
 Ambientes (`boards`): cada nota pertence a um ambiente (`notes.board_id`, FK composta com `user_id`, `on delete cascade`). Nome livre (único por usuário) e cor do ícone. Nota inserida sem `board_id` vai para o primeiro ambiente do usuário (trigger `notes_assign_board`, cria "Geral" se preciso). O ambiente atual e a visão de cada ambiente ficam no localStorage do aparelho.
 
 ## Fora do escopo (decisão de produto)
-Colaboração, equipes, comentários, subtarefas complexas, kanban, pomodoro, gamificação, hábitos, anexos, IA desnecessária, recursos de whiteboard além das notas (setas, formas, desenho).
+Colaboração, equipes, comentários, subtarefas complexas (o checklist é só uma lista simples), pomodoro, gamificação, hábitos, anexos, IA desnecessária, recursos de whiteboard além das notas (setas, formas, desenho).

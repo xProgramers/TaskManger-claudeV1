@@ -9,7 +9,7 @@ export function TaskModal() {
   const { create } = useTaskActions();
 
   return (
-    <Dialog open={createOpen} onClose={closeCreate} title="Nova tarefa" hideTitle position="top" className="max-w-[600px]">
+    <Dialog open={createOpen} onClose={closeCreate} title="Nova tarefa" hideTitle position="top" className="flex max-h-[84vh] max-w-[680px] flex-col max-sm:max-h-[92dvh]">
       {createOpen && (
         <TaskForm
           naturalLanguage
@@ -23,6 +23,7 @@ export function TaskModal() {
             category_id: createDefaults.category_id ?? null,
             reminder_offset_minutes: null,
             recurrence: null,
+            checklist: [],
           }}
           onSubmit={async (input) => {
             await create(input);

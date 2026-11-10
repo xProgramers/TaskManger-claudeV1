@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
-import type { ISODate, ISOTime, Recurrence, ReminderOffset, TaskInput, TaskPriority } from '@/types';
+import type { ChecklistItem, ISODate, ISOTime, Recurrence, ReminderOffset, TaskInput, TaskPriority } from '@/types';
 import { cn } from '@/utils/cn';
 import { formatDayMonthShort, formatTime, nowTimeIn, normalizeTime, relativeDayLabel } from '@/utils/dates';
 import { parseQuickAdd, type QuickTokenKind } from '@/utils/quickAdd';
@@ -10,7 +10,8 @@ import { useTaskUI } from '@/contexts/TaskUIContext';
 import { useCategories } from '@/hooks/useCategories';
 import { Button } from '@/components/ui/Button';
 import { Kbd } from '@/components/ui/Form';
-import { EnterIcon, XIcon } from '@/components/icons';
+import { ChecklistIcon, EnterIcon, TextIcon, XIcon } from '@/components/icons';
+import { Checklist } from './Checklist';
 import { CategoryChip, DateChip, PriorityChip, ReminderChip, RepeatChip, TimeChip } from './TaskFields';
 
 export interface TaskFormValues {
@@ -22,6 +23,7 @@ export interface TaskFormValues {
   category_id: string | null;
   reminder_offset_minutes: ReminderOffset | null;
   recurrence: Recurrence | null;
+  checklist: ChecklistItem[];
 }
 
 interface TaskFormProps {
@@ -53,6 +55,7 @@ export function TaskForm({ initial, submitLabel, onSubmit, onCancel, naturalLang
   const [reminderTouched, setReminderTouched] = useState(editing ?? false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showChecklist, setShowChecklist] = useState(initial.checklist.length > 0);
   const titleRef = useRef<HTMLTextAreaElement>(null);
 
   const parsed = useMemo(
@@ -110,6 +113,7 @@ export function TaskForm({ initial, submitLabel, onSubmit, onCancel, naturalLang
         category_id: effective.category_id,
         reminder_offset_minutes: reminder,
         recurrence,
+        checklist: v.checklist.filter((i) => i.text.trim()),
       });
     } catch {
       // The toast already explained; keep the form open with the user's input.
@@ -147,117 +151,166 @@ export function TaskForm({ initial, submitLabel, onSubmit, onCancel, naturalLang
     }
   };
 
-  return (
-    <form onSubmit={submit} noValidate className="flex flex-col">
-      <div className="px-5 pt-4">
-        <label htmlFor="task-title" className="sr-only">
-          Título da tarefa
-        </label>
-        <textarea
-          id="task-title"
-          ref={titleRef}
-          data-autofocus
-          rows={1}
-          value={v.title}
-          maxLength={260}
-          onChange={(e) => {
-            setV((p) => ({ ...p, title: e.target.value.replace(/\n/g, ' ') }));
-            if (error) setError(null);
-          }}
-          onKeyDown={onTitleKey}
-          placeholder={naturalLanguage ? 'Ex.: Enviar relatório amanhã às 14h' : 'Título da tarefa'}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? 'task-title-error' : parsed?.tokens.length ? 'task-understood' : undefined}
-          className="field-sizing-content block min-h-7 w-full resize-none bg-transparent text-lg font-medium text-ink placeholder:font-normal placeholder:text-ink-3 focus:outline-none"
-        />
-        {error && (
-          <p id="task-title-error" role="alert" className="mt-1 text-sm text-danger">
-            {error}
-          </p>
-        )}
+  const chips = (
+    <div className="flex flex-wrap gap-1.5">
+      <DateChip
+        value={effective.due_date}
+        today={today}
+        weekStartsOn={weekStartsOn}
+        onChange={(d) => {
+          setManual('due_date', d, 'date');
+          if (!d) setManual('due_time', null, 'time');
+        }}
+      />
+      <TimeChip
+        value={effective.due_time}
+        format={timeFormat}
+        disabled={!effective.due_date}
+        onChange={(t) => setManual('due_time', t, 'time')}
+      />
+      <RepeatChip value={recurrence} date={effective.due_date} onChange={(r) => setManual('recurrence', r, 'repeat')} />
+      <PriorityChip value={effective.priority} onChange={(p) => setManual('priority', p, 'priority')} />
+      <CategoryChip
+        value={effective.category_id}
+        categories={categories}
+        onChange={(c) => setManual('category_id', c, 'category')}
+        onManage={openCategories}
+      />
+      <ReminderChip
+        value={reminder}
+        disabled={!effective.due_date}
+        hasTime={Boolean(effective.due_time)}
+        onChange={(r) => {
+          setReminderTouched(true);
+          setV((p) => ({ ...p, reminder_offset_minutes: r }));
+        }}
+      />
+      {!showChecklist && (
+        <button
+          type="button"
+          onClick={() => setShowChecklist(true)}
+          className="inline-flex h-8 items-center gap-1.5 rounded-sm border border-line bg-surface px-2.5 text-sm font-medium text-ink-2 hover:text-ink"
+        >
+          <ChecklistIcon size={14} className="text-ink-3" />
+          Checklist
+        </button>
+      )}
+    </div>
+  );
 
-        {parsed && parsed.tokens.length > 0 && (
-          <div id="task-understood" className="mt-2 flex flex-wrap items-center gap-1.5 text-sm" aria-live="polite">
-            <span className="text-ink-3">Entendi:</span>
-            {parsed.tokens.map((t) => (
-              <span
-                key={t.kind}
-                className="inline-flex h-6 items-center gap-1 rounded-xs bg-accent-soft pr-1 pl-2 font-medium text-accent"
-              >
-                {tokenText(t.kind)}
-                <button
-                  type="button"
-                  onClick={() => setIgnored((s) => [...s, t.kind])}
-                  aria-label={`Não usar “${t.text}” como ${TOKEN_LABEL[t.kind]}`}
-                  title={`Manter “${t.text}” no título`}
-                  className="rounded-xs p-0.5 hover:bg-accent/15"
-                >
-                  <XIcon size={11} />
-                </button>
-              </span>
-            ))}
+  return (
+    <form onSubmit={submit} noValidate className="flex max-h-[inherit] min-h-0 flex-col">
+      {/* Editing happens inside the details panel, which has its own close button. */}
+      {!editing && (
+        <div className="flex items-center justify-between border-b border-line px-5 py-2.5">
+          <span className="rounded-xs bg-sunken px-2 py-0.5 text-xs font-semibold tracking-wide text-ink-2 uppercase">
+            Nova tarefa
+          </span>
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Fechar"
+            className="rounded-xs p-1.5 text-ink-3 hover:bg-hover hover:text-ink"
+          >
+            <XIcon size={16} />
+          </button>
+        </div>
+      )}
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-5 pb-6 scrollbar-thin">
+        <div className="flex items-start gap-3">
+          <span aria-hidden="true" className="mt-[9px] size-[18px] shrink-0 rounded-full border-[1.75px] border-line-strong" />
+          <div className="min-w-0 flex-1">
+            <label htmlFor="task-title" className="sr-only">
+              Título da tarefa
+            </label>
+            <textarea
+              id="task-title"
+              ref={titleRef}
+              data-autofocus
+              rows={1}
+              value={v.title}
+              maxLength={260}
+              onChange={(e) => {
+                setV((p) => ({ ...p, title: e.target.value.replace(/\n/g, ' ') }));
+                if (error) setError(null);
+              }}
+              onKeyDown={onTitleKey}
+              placeholder={naturalLanguage ? 'Ex.: Enviar relatório amanhã às 14h' : 'Título da tarefa'}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? 'task-title-error' : parsed?.tokens.length ? 'task-understood' : undefined}
+              className="field-sizing-content block min-h-9 w-full resize-none bg-transparent text-2xl font-semibold tracking-[-0.02em] text-ink placeholder:font-medium placeholder:text-ink-3/70 focus:outline-none"
+            />
+            {error && (
+              <p id="task-title-error" role="alert" className="mt-1 text-sm text-danger">
+                {error}
+              </p>
+            )}
+
+            {parsed && parsed.tokens.length > 0 && (
+              <div id="task-understood" className="mt-2 flex flex-wrap items-center gap-1.5 text-sm" aria-live="polite">
+                <span className="text-ink-3">Entendi:</span>
+                {parsed.tokens.map((t) => (
+                  <span
+                    key={t.kind}
+                    className="inline-flex h-6 items-center gap-1 rounded-xs bg-accent-soft pr-1 pl-2 font-medium text-accent"
+                  >
+                    {tokenText(t.kind)}
+                    <button
+                      type="button"
+                      onClick={() => setIgnored((s) => [...s, t.kind])}
+                      aria-label={`Não usar “${t.text}” como ${TOKEN_LABEL[t.kind]}`}
+                      title={`Manter “${t.text}” no título`}
+                      className="rounded-xs p-0.5 hover:bg-accent/15"
+                    >
+                      <XIcon size={11} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="mt-4">{chips}</div>
+          </div>
+        </div>
+
+        <section className="mt-7" aria-labelledby="task-description-label">
+          <h3 id="task-description-label" className="flex items-center gap-2.5 text-base font-semibold text-ink">
+            <TextIcon size={18} className="text-ink-2" />
+            Descrição
+          </h3>
+          <textarea
+            id="task-description"
+            aria-labelledby="task-description-label"
+            value={v.description}
+            maxLength={5000}
+            onChange={(e) => setV((p) => ({ ...p, description: e.target.value }))}
+            onKeyDown={onDescriptionKey}
+            placeholder="Adicione uma descrição mais detalhada…"
+            className="field-sizing-content mt-2.5 block max-h-56 min-h-[72px] w-full resize-none rounded-sm border border-line bg-surface px-3 py-2 text-base leading-6 text-ink-2 placeholder:text-ink-3 focus:border-accent focus:outline-none"
+          />
+        </section>
+
+        {showChecklist && (
+          <div className="mt-7">
+            <Checklist
+              items={v.checklist}
+              autoFocusAdd={initial.checklist.length === 0}
+              onChange={(checklist) => setV((p) => ({ ...p, checklist }))}
+              onRemove={() => {
+                setV((p) => ({ ...p, checklist: [] }));
+                setShowChecklist(false);
+              }}
+            />
           </div>
         )}
-
-        <label htmlFor="task-description" className="sr-only">
-          Descrição
-        </label>
-        <textarea
-          id="task-description"
-          value={v.description}
-          maxLength={5000}
-          onChange={(e) => setV((p) => ({ ...p, description: e.target.value }))}
-          onKeyDown={onDescriptionKey}
-          placeholder="Descrição (opcional)"
-          className="field-sizing-content mt-2 block max-h-56 min-h-6 w-full resize-none bg-transparent text-base leading-6 text-ink-2 placeholder:text-ink-3 focus:outline-none"
-        />
-      </div>
-
-      <div className="flex flex-wrap gap-1.5 px-5 pt-4 pb-4">
-        <DateChip
-          value={effective.due_date}
-          today={today}
-          weekStartsOn={weekStartsOn}
-          onChange={(d) => {
-            setManual('due_date', d, 'date');
-            if (!d) setManual('due_time', null, 'time');
-          }}
-        />
-        <TimeChip
-          value={effective.due_time}
-          format={timeFormat}
-          disabled={!effective.due_date}
-          onChange={(t) => setManual('due_time', t, 'time')}
-        />
-        <RepeatChip
-          value={recurrence}
-          date={effective.due_date}
-          onChange={(r) => setManual('recurrence', r, 'repeat')}
-        />
-        <PriorityChip value={effective.priority} onChange={(p) => setManual('priority', p, 'priority')} />
-        <CategoryChip
-          value={effective.category_id}
-          categories={categories}
-          onChange={(c) => setManual('category_id', c, 'category')}
-          onManage={openCategories}
-        />
-        <ReminderChip
-          value={reminder}
-          disabled={!effective.due_date}
-          hasTime={Boolean(effective.due_time)}
-          onChange={(r) => {
-            setReminderTouched(true);
-            setV((p) => ({ ...p, reminder_offset_minutes: r }));
-          }}
-        />
       </div>
 
       <div className="flex items-center justify-between gap-3 border-t border-line px-5 py-3">
-        <p className={cn('hidden items-center gap-1.5 text-sm text-ink-3 sm:flex')}>
+        <p className={cn('hidden items-center gap-1.5 text-sm text-ink-3', !editing && 'sm:flex')}>
           <Kbd>
             <EnterIcon size={11} />
           </Kbd>
-          para {editing ? 'salvar' : 'criar'}
+          no título para {editing ? 'salvar' : 'criar'}
           <span className="px-1 text-line-strong">/</span>
           <Kbd>Esc</Kbd> para cancelar
         </p>

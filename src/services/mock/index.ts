@@ -209,6 +209,8 @@ export const mockApi: Api = {
         reminder_offset_minutes: input.due_date ? (input.reminder_offset_minutes ?? null) : null,
         recurrence: input.due_date ? (input.recurrence ?? null) : null,
         category_id: input.category_id ?? null,
+        checklist: input.checklist ?? [],
+        doing: false,
         completed_at: null,
         created_at: now,
         updated_at: now,
@@ -226,6 +228,7 @@ export const mockApi: Api = {
       const task = findTask(id);
       const prevStatus = task.status;
       Object.assign(task, patch);
+      if (prevStatus === 'pending' && task.status === 'completed') task.doing = false;
       if ('title' in patch) task.title = (patch.title ?? '').trim();
       if ('description' in patch) task.description = patch.description?.trim() || null;
       if ('due_date' in patch || 'due_time' in patch) task.timezone = timezone;
@@ -237,6 +240,7 @@ export const mockApi: Api = {
         // Same as the database: a repeating task moves to its next date.
         task.status = 'pending';
         task.due_date = nextOccurrence(task.recurrence, task.due_date, todayIn(task.timezone));
+        task.checklist = task.checklist.map((i) => ({ ...i, done: false }));
       }
       task.due_at = computeDueAt(task.due_date, task.due_time, task.timezone);
       if (task.status !== prevStatus) task.completed_at = task.status === 'completed' ? new Date().toISOString() : null;

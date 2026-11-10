@@ -5,7 +5,7 @@ import { toAppError } from '@/utils/errors';
 import { getSupabase } from './client';
 
 const COLUMNS =
-  'id,user_id,title,description,status,priority,due_date,due_time,timezone,due_at,reminder_offset_minutes,recurrence,category_id,completed_at,created_at,updated_at';
+  'id,user_id,title,description,status,priority,due_date,due_time,timezone,due_at,reminder_offset_minutes,recurrence,category_id,checklist,doing,completed_at,created_at,updated_at';
 
 const asTask = (row: unknown) => row as Task;
 const asTasks = (rows: unknown) => (rows ?? []) as Task[];
